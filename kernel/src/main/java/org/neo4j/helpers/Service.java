@@ -35,6 +35,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.ServiceLoader;
 import java.util.Set;
 
 import org.neo4j.helpers.collection.FilteringIterable;
@@ -329,8 +330,8 @@ public abstract class Service
         {
             @SuppressWarnings( "unchecked" ) Iterable<T> result = (Iterable<T>)
                     Class.forName( "java.util.ServiceLoader" )
-                    .getMethod( "load", Class.class )
-                    .invoke( null, type );
+                    .getMethod( "load", Class.class, ClassLoader.class )
+                    .invoke( null, type, Service.class.getClassLoader() );
             return filterExceptions( result );
         }
         catch ( Exception e )
@@ -342,6 +343,8 @@ public abstract class Service
             return null;
         }
     }
+    
+    
 
     private static <T> Iterable<T> sunJava5Loader( final Class<T> type )
     {
