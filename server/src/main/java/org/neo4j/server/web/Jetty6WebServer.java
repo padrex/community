@@ -39,6 +39,7 @@ import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.nio.SelectChannelConnector;
+import org.mortbay.jetty.security.SslSocketConnector;
 
 import org.mortbay.jetty.SessionManager;
 import org.mortbay.jetty.handler.MovedContextHandler;
@@ -72,74 +73,6 @@ public class Jetty6WebServer implements WebServer
     private NeoServer server;
     private int jettyMaxThreads = tenThreadsPerProcessor();
 
-    private int tenThreadsPerProcessor()
-    {
-        return 10 * Runtime.getRuntime()
-                .availableProcessors();
-    }
-
-    @Override
-    public void setNeoServer( NeoServer server )
-    {
-        this.server = server;
-    }
-
-    @Override
-    public void start()
-    {
-        if ( jetty == null )
-        {
-            throw new IllegalStateException( "Jetty not initialized." );
-        }
-        MovedContextHandler redirector = new MovedContextHandler();
-
-        jetty.addHandler( redirector );
-
-        loadAllMounts();
-
-        startJetty();
-    }
-
-    private void loadAllMounts()
-    {
-        SessionManager sm = new HashSessionManager();
-
-        final SortedSet<String> mountpoints = new TreeSet<String>( new Comparator<String>()
-        {
-            @Override
-            public int compare( final String o1, final String o2 )
-            {
-                return o2.compareTo( o1 );
-            }
-        } );
-
-        mountpoints.addAll( staticContent.keySet() );
-        mountpoints.addAll( jaxRSPackages.keySet() );
-
-        for ( String contentKey : mountpoints )
-        {
-            final boolean isStatic = staticContent.containsKey( contentKey );
-            final boolean isJaxrs = jaxRSPackages.containsKey( contentKey );
-
-            if ( isStatic && isJaxrs )
-            {
-                throw new RuntimeException( format( "content-key '%s' is mapped twice (static and jaxrs)", contentKey ) );
-            }
-            else if ( isStatic )
-            {
-                loadStaticContent( sm, contentKey );
-            }
-            else if ( isJaxrs )
-            {
-                loadJAXRSPackage( sm, contentKey );
-            }
-            else
-            {
-                throw new RuntimeException( format( "content-key '%s' is not mapped", contentKey ) );
-            }
-        }
-    }
-
     @Override
     public void init()
     {
@@ -150,21 +83,11 @@ public class Jetty6WebServer implements WebServer
             
             connector.setPort( jettyPort );
             connector.setHost( jettyAddr );
+            
             jetty.addConnector( connector );
+            //jetty.addConnector( sslConnector );
 
             jetty.setThreadPool( new QueuedThreadPool( jettyMaxThreads ) );
-        }
-    }
-
-    protected void startJetty()
-    {
-        try
-        {
-            jetty.start();
-        }
-        catch ( Exception e )
-        {
-            throw new RuntimeException( e );
         }
     }
 
@@ -218,6 +141,106 @@ public class Jetty6WebServer implements WebServer
         jaxRSPackages.put( mountPoint, servletHolder );
     }
 
+    @Override
+    public void setNeoServer( NeoServer server )
+    {
+        this.server = server;
+    }
+
+    @Override
+    public void start()
+    {
+        if ( jetty == null )
+        {
+            throw new IllegalStateException( "Jetty not initialized." );
+        }
+        MovedContextHandler redirector = new MovedContextHandler();
+
+        jetty.addHandler( redirector );
+
+        loadAllMounts();
+
+        startJetty();
+    }
+
+    @Override
+    public void addStaticContent( String contentLocation, String serverMountPoint )
+    {
+        staticContent.put( serverMountPoint, contentLocation );
+    }
+
+    @Override
+    public void invokeDirectly( String targetPath, HttpServletRequest request, HttpServletResponse response )
+            throws IOException, ServletException
+    {
+        jetty.handle( targetPath, request, response, Handler.REQUEST );
+    }
+
+
+    @Override
+    public Server getJetty()
+    {
+        return jetty;
+    }
+
+    protected void startJetty()
+    {
+        try
+        {
+            jetty.start();
+        }
+        catch ( Exception e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+    
+    private int tenThreadsPerProcessor()
+    {
+        return 10 * Runtime.getRuntime()
+                .availableProcessors();
+    }
+
+    private void loadAllMounts()
+    {
+        SessionManager sm = new HashSessionManager();
+
+        final SortedSet<String> mountpoints = new TreeSet<String>( new Comparator<String>()
+        {
+            @Override
+            public int compare( final String o1, final String o2 )
+            {
+                return o2.compareTo( o1 );
+            }
+        } );
+
+        mountpoints.addAll( staticContent.keySet() );
+        mountpoints.addAll( jaxRSPackages.keySet() );
+
+        for ( String contentKey : mountpoints )
+        {
+            final boolean isStatic = staticContent.containsKey( contentKey );
+            final boolean isJaxrs = jaxRSPackages.containsKey( contentKey );
+
+            if ( isStatic && isJaxrs )
+            {
+                throw new RuntimeException( format( "content-key '%s' is mapped twice (static and jaxrs)", contentKey ) );
+            }
+            else if ( isStatic )
+            {
+                loadStaticContent( sm, contentKey );
+            }
+            else if ( isJaxrs )
+            {
+                loadJAXRSPackage( sm, contentKey );
+            }
+            else
+            {
+                throw new RuntimeException( format( "content-key '%s' is not mapped", contentKey ) );
+            }
+        }
+    }
+
     private String trimTrailingSlashToKeepJettyHappy( String mountPoint )
     {
         if ( mountPoint.equals( "/" ) )
@@ -251,19 +274,6 @@ public class Jetty6WebServer implements WebServer
             log.debug( "Unable to translate [%s] to a relative URI in ensureRelativeUri(String mountPoint)", mountPoint );
             return mountPoint;
         }
-    }
-
-    @Override
-    public void addStaticContent( String contentLocation, String serverMountPoint )
-    {
-        staticContent.put( serverMountPoint, contentLocation );
-    }
-
-    @Override
-    public void invokeDirectly( String targetPath, HttpServletRequest request, HttpServletResponse response )
-            throws IOException, ServletException
-    {
-        jetty.handle( targetPath, request, response, Handler.REQUEST );
     }
 
     private void loadStaticContent( SessionManager sm, String mountPoint )
@@ -324,11 +334,5 @@ public class Jetty6WebServer implements WebServer
 
         String result = sb.toString();
         return result.substring( 0, result.length() - 2 );
-    }
-
-    @Override
-    public Server getJetty()
-    {
-        return jetty;
     }
 }
