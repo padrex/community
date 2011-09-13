@@ -27,7 +27,7 @@ class WhereTest extends DocumentingTestBase {
   def graphDescription = List("Andres KNOWS Tobias")
 
   override val properties = Map(
-    "Andres" -> Map("age" -> 36l, "belt"->"white"),
+    "Andres" -> Map("age" -> 36l, "belt" -> "white"),
     "Tobias" -> Map("age" -> 25l)
   )
 
@@ -79,5 +79,4 @@ class WhereTest extends DocumentingTestBase {
       returns = """The relationship that has a type whose name starts with K.""",
       (p) => assertEquals("KNOWS", p.columnAs[Relationship]("r").toList.head.getType.name()))
   }
-
 }
