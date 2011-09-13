@@ -22,8 +22,8 @@ package org.neo4j.cypher
 
 import org.scalatest.junit.JUnitSuite
 import parser.CypherParser
-import org.junit.Test
 import org.junit.Assert._
+import org.junit.{Ignore, Test}
 
 class SyntaxExceptionTest extends JUnitSuite {
   def expectError(query: String, expectedError: String) {
@@ -98,11 +98,16 @@ class SyntaxExceptionTest extends JUnitSuite {
   }
 
 
-
   @Test def shouldComplainAboutAStringBeingExpected() {
     expectError(
       "start s=(index,key,value) return s limit -1",
       "String literal expected")
+  }
+
+  @Ignore @Test def nodeParenthesisMustBeClosed() {
+    expectError(
+      "start s=(1) match s-->(x return x",
+      "Unfinished parenthesis around 'x'")
   }
 
   @Test def handlesMultilineQueries() {
@@ -123,7 +128,7 @@ class SyntaxExceptionTest extends JUnitSuite {
     try {
       new CypherParser().parse(query)
     } catch {
-      case x:SyntaxException => assertEquals(expected, x.getMessage)
+      case x: SyntaxException => assertEquals(expected, x.getMessage)
     }
   }
 }

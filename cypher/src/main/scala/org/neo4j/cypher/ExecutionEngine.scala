@@ -30,14 +30,26 @@ class ExecutionEngine(graph: GraphDatabaseService) {
   checkScalaVersion()
 
 
+  def extractReturnItems(returns: Return, aggregation: Option[Aggregation], sort: Option[Sort]): Seq[ReturnItem] = {
+    val aggregation1 = aggregation.getOrElse(new Aggregation())
+    val sort1 = sort.getOrElse(new Sort())
+
+    val aggregationItems = aggregation1.aggregationItems.map(_.concreteReturnItem)
+    val sortItems = sort1.sortItems.map(_.returnItem.concreteReturnItem)
+
+    returns.returnItems ++ aggregationItems ++ sortItems
+  }
+
   @throws(classOf[SyntaxException])
   def execute(query: Query): ExecutionResult = query match {
-    case Query(returns, start, matching, where, aggregation, sort, slice) => {
+    case Query(returns, start, matching, where, aggregation, sort, slice, namedPaths) => {
       var pipe = createSourcePumps(start).reduceLeft(_ ++ _)
 
-      matching match {
+      pipe = createMatchPipe(matching, namedPaths, pipe)
+
+      namedPaths match {
         case None =>
-        case Some(m) => pipe = new PatternPipe(pipe, m)
+        case Some(x) => x.paths.foreach(p => pipe = new NamedPathPipe(pipe, p))
       }
 
       where match {
@@ -45,9 +57,7 @@ class ExecutionEngine(graph: GraphDatabaseService) {
         case Some(w) => pipe = new FilterPipe(pipe, w)
       }
 
-      val allReturnItems = returns.returnItems ++
-        aggregation.getOrElse(new Aggregation()).aggregationItems.map(_.concreteReturnItem) ++
-        sort.getOrElse(new Sort()).sortItems.map(_.returnItem.concreteReturnItem)
+      val allReturnItems = extractReturnItems(returns, aggregation, sort)
 
       pipe = new TransformPipe(pipe, allReturnItems)
 
@@ -74,25 +84,48 @@ class ExecutionEngine(graph: GraphDatabaseService) {
 
       val result = new ColumnFilterPipe(pipe, columns) with ExecutionResult
 
+
+
       result
     }
   }
 
+  private def createMatchPipe(unnamedPaths: Option[Match], namedPaths: Option[NamedPaths], pipe: Pipe): Pipe = {
+    val namedPattern = namedPaths match {
+      case Some(m) => m.paths.flatten
+      case None => Seq()
+    }
+
+    val unnamedPattern = unnamedPaths match {
+      case Some(m) => m.patterns
+      case None => Seq()
+    }
+
+    (unnamedPattern ++ namedPattern) match {
+      case Seq() => pipe
+      case x => new MatchPipe(pipe, x)
+    }
+  }
+
   private def createSourcePumps(from: Start): Seq[Pipe] =
-    from.startItems.map((item) => {
+    from.startItems.map(item =>
       item match {
-        case NodeByIndex(varName, idxName, key, value) => {
-          val indexHits: Iterable[Node] = graph.index.forNodes(idxName).get(key, value)
-          new StartPipe(varName, indexHits.asScala.toList)
-        }
-        case NodeByIndexQuery(varName, idxName, query) => {
-          val indexHits: Iterable[Node] = graph.index.forNodes(idxName).query(query)
-          new StartPipe(varName, indexHits.asScala.toList)
-        }
+        case NodeByIndex(varName, idxName, key, value) =>
+          new StartPipe(varName, () => {
+            val indexHits: Iterable[Node] = graph.index.forNodes(idxName).get(key, value)
+            indexHits.asScala
+          })
+
+        case NodeByIndexQuery(varName, idxName, query) =>
+          new StartPipe(varName, () => {
+            val indexHits: Iterable[Node] = graph.index.forNodes(idxName).query(query)
+            indexHits.asScala
+          })
+
         case NodeById(varName, ids@_*) => new StartPipe(varName, ids.map(graph.getNodeById))
         case RelationshipById(varName, ids@_*) => new StartPipe(varName, ids.map(graph.getRelationshipById))
-      }
-    })
+
+      })
 
   def checkScalaVersion() {
     if (util.Properties.versionString.matches("^version 2.9.0")) {

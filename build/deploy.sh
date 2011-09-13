@@ -6,7 +6,7 @@ tcrepo=http://builder.neo4j.org/guestAuth/repository/download/bt18/lastSuccessfu
 mvnrepo=http://build-repo.neo4j.org/repository/snapshots/
 
 function work {
-    deploy_defaults neo4j-graph-algo neo4j-jmx neo4j-kernel neo4j-lucene-index neo4j-shell server-api neo4j-graph-matching
+    deploy_defaults neo4j-graph-algo neo4j-jmx neo4j-kernel neo4j-lucene-index neo4j-shell server-api neo4j-graph-matching neo4j-graphviz
 
     deploy neo4j-udc docs javadoc sources test-sources tests neo4j
 
@@ -15,13 +15,11 @@ function work {
     
     deploy neo4j-cypher sources test-sources tests docs
     
-    deploy neo4j-server site static-web docs javadoc sources test-sources tests
+    deploy neo4j-server static-web docs javadoc sources test-sources tests
 
-    deploy_tarball neo4j-examples download
-    deploy neo4j-examples docs sources test-sources tests site
+    deploy neo4j-examples docs sources test-sources tests
 
-    deploy_tarball neo4j-server-examples download
-    deploy neo4j-server-examples docs site sources test-sources tests
+    deploy neo4j-server-examples docs sources test-sources tests
 }
 
 function deploy_defaults {

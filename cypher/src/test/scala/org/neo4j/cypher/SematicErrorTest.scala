@@ -20,43 +20,38 @@
 package org.neo4j.cypher
 
 import commands._
-import org.junit.Test
 import org.junit.Assert._
-import org.neo4j.graphdb.{Direction, Node}
+import org.junit.Test
+import parser.CypherParser
 
-class SematicErrorTest extends ExecutionEngineTestBase {
+class SematicErrorTest extends ExecutionEngineHelper {
   @Test def returnNodeThatsNotThere() {
-    val node: Node = createNode()
-
-    val query = Query.
-      start(NodeById("foo", node.getId)).
-      RETURN(ValueReturnItem(EntityValue("bar")))
-
-    expectedError(query, """Unknown identifier "bar".""")
+    expectedError("start x=(0) return bar", """Unknown identifier "bar".""")
   }
 
   @Test def throwOnDisconnectedPattern() {
-    val node: Node = createNode()
-
-    val query = Query.
-      start(NodeById("foo", node.getId)).
-      matches(RelatedTo("a", "b", None, None, Direction.BOTH)).
-      RETURN(ValueReturnItem(EntityValue("foo")))
-
-    expectedError(query, "All parts of the pattern must either directly or indirectly be connected to at least one bound entity. These identifiers were found to be disconnected: a, b")
+    expectedError("start x=(0) match a-[rel]->b return x",
+      "All parts of the pattern must either directly or indirectly be connected to at least one bound entity. These identifiers were found to be disconnected: a, b, rel")
   }
 
   @Test def defineNodeAndTreatItAsARelationship() {
-    val node: Node = createNode()
-
-    val query = Query.
-      start(NodeById("foo", node.getId)).
-      matches(RelatedTo("a", "b", Some("foo"), None, Direction.BOTH)).
-      RETURN(ValueReturnItem(EntityValue("foo")))
-
-    expectedError(query, "Identifier NodeIdentifier(foo) already defined with different type RelationshipIdentifier(foo)")
+    expectedError("start r=(0) match a-[r]->b return r",
+      "Identifier NodeIdentifier(r) already defined with different type RelationshipIdentifier(r)")
   }
 
+  @Test def cantUseTYPEOnNodes() {
+    expectedError("start r=(0) return r.TYPE",
+      "Expected r to be a RelationshipIdentifier but it was NodeIdentifier")
+  }
+
+  @Test def cantUseLENGTHOnNodes() {
+    expectedError("start r=(0) return r.LENGTH",
+      "Expected r to be a ArrayIdentifier but it was NodeIdentifier")
+  }
+
+  def parse(txt:String):Query = new CypherParser().parse(txt)
+
+  def expectedError(query: String, message: String) { expectedError(parse(query), message) }
 
   def expectedError(query: Query, message: String) {
     try {

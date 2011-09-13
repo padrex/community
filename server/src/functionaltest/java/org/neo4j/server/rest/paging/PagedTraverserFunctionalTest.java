@@ -43,8 +43,8 @@ import org.neo4j.server.NeoServerWithEmbeddedWebServer;
 import org.neo4j.server.ServerBuilder;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.helpers.ServerHelper;
-import org.neo4j.server.rest.DocsGenerator;
-import org.neo4j.server.rest.DocsGenerator.ResponseEntity;
+import org.neo4j.server.rest.RESTDocsGenerator;
+import org.neo4j.server.rest.RESTDocsGenerator.ResponseEntity;
 import org.neo4j.server.rest.FunctionalTestHelper;
 import org.neo4j.server.rest.JSONPrettifier;
 import org.neo4j.server.rest.JaxRsResponse;
@@ -55,7 +55,7 @@ import org.neo4j.test.TestData;
 public class PagedTraverserFunctionalTest
 {
     public @Rule
-    TestData<DocsGenerator> docGenerator = TestData.producedThrough( DocsGenerator.PRODUCER );
+    TestData<RESTDocsGenerator> docGenerator = TestData.producedThrough( RESTDocsGenerator.PRODUCER );
 
     private static NeoServerWithEmbeddedWebServer server;
     private static FunctionalTestHelper functionalTestHelper;
@@ -105,8 +105,8 @@ public class PagedTraverserFunctionalTest
      * Creating a paged traverser. Paged traversers are created by +POST+-ing a
      * traversal description to the link identified by the +paged_traverser+ key
      * in a node representation. When creating a paged traverser, the same
-     * options apply as for a regular traverser, meaning that +node+, 'path/',
-     * or 'fullpath', can be targeted.
+     * options apply as for a regular traverser, meaning that +node+, +path+,
+     * or +fullpath+, can be targeted.
      */
     @Documented
     @Test

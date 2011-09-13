@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 import java.util.Map;
 
+import org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog.LogExtractor;
+
 public abstract class LogBackedXaDataSource extends XaDataSource
 {
     private XaLogicalLog logicalLog;
@@ -49,12 +51,6 @@ public abstract class LogBackedXaDataSource extends XaDataSource
     }
 
     @Override
-    public void applyLog( ReadableByteChannel byteChannel ) throws IOException
-    {
-        logicalLog.applyLog( byteChannel );
-    }
-
-    @Override
     public boolean deleteLogicalLog( long version )
     {
         return logicalLog.deleteLogicalLog( version );
@@ -63,7 +59,7 @@ public abstract class LogBackedXaDataSource extends XaDataSource
     @Override
     public ReadableByteChannel getLogicalLog( long version ) throws IOException
     {
-        return logicalLog.getLogicalLog( version );
+        return logicalLog.getLogicalLogOrMyselfCommitted( version, 0 );
     }
 
     @Override
@@ -109,27 +105,9 @@ public abstract class LogBackedXaDataSource extends XaDataSource
     }
 
     @Override
-    public void makeBackupSlave()
-    {
-        logicalLog.makeBackupSlave();
-    }
-
-    @Override
     public String getFileName( long version )
     {
         return logicalLog.getFileName( version );
-    }
-
-    @Override
-    public ReadableByteChannel getCommittedTransaction( long txId ) throws IOException
-    {
-        return logicalLog.getCommittedTransaction( txId );
-    }
-
-    @Override
-    public void getCommittedTransaction( long txId, LogBuffer buffer ) throws IOException
-    {
-        logicalLog.getCommittedTransaction( txId, buffer );
     }
 
     @Override
@@ -148,5 +126,11 @@ public abstract class LogBackedXaDataSource extends XaDataSource
     public int getMasterForCommittedTx( long txId ) throws IOException
     {
         return logicalLog.getMasterIdForCommittedTransaction( txId );
+    }
+    
+    @Override
+    public LogExtractor getLogExtractor( long startTxId, long endTxIdHint ) throws IOException
+    {
+        return logicalLog.getLogExtractor( startTxId, endTxIdHint );
     }
 }

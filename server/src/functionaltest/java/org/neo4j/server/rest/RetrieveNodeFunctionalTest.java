@@ -19,22 +19,29 @@
  */
 package org.neo4j.server.rest;
 
-import org.junit.*;
-import org.neo4j.kernel.impl.annotations.Documented;
-import org.neo4j.server.NeoServerWithEmbeddedWebServer;
-import org.neo4j.server.helpers.ServerHelper;
-import org.neo4j.server.rest.DocsGenerator.ResponseEntity;
-import org.neo4j.server.rest.domain.GraphDbHelper;
-import org.neo4j.server.rest.domain.JsonHelper;
-import org.neo4j.server.rest.repr.formats.CompactJsonFormat;
-import org.neo4j.test.TestData;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import javax.ws.rs.core.MediaType;
+
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.neo4j.kernel.impl.annotations.Documented;
+import org.neo4j.server.NeoServerWithEmbeddedWebServer;
+import org.neo4j.server.helpers.ServerHelper;
+import org.neo4j.server.rest.RESTDocsGenerator.ResponseEntity;
+import org.neo4j.server.rest.domain.GraphDbHelper;
+import org.neo4j.server.rest.domain.JsonHelper;
+import org.neo4j.server.rest.repr.formats.CompactJsonFormat;
+import org.neo4j.test.TestData;
 
 public class RetrieveNodeFunctionalTest
 {
@@ -64,7 +71,7 @@ public class RetrieveNodeFunctionalTest
     }
 
     public @Rule
-    TestData<DocsGenerator> gen = TestData.producedThrough( DocsGenerator.PRODUCER );
+    TestData<RESTDocsGenerator> gen = TestData.producedThrough( RESTDocsGenerator.PRODUCER );
 
     /**
      * Get node.

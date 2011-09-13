@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <parent>
-    <groupId>org.neo4j</groupId>
+    <groupId>org.neo4j.build</groupId>
     <artifactId>parent-central</artifactId>
-    <version>22</version>
+    <version>25</version>
   </parent>
 
   <properties>
@@ -52,17 +52,23 @@
       <version>${scala.version}</version>
     </dependency>
     <dependency>
-    <groupId>org.scalatest</groupId>
-    <artifactId>scalatest_2.9.0</artifactId>
-    <version>1.6.1</version>
-    <scope>test</scope>
+      <groupId>org.scalatest</groupId>
+      <artifactId>scalatest_2.9.0</artifactId>
+      <version>1.6.1</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-kernel</artifactId>
       <version>1.5-SNAPSHOT</version>
       <type>test-jar</type>
-	  <scope>test</scope>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j</groupId>
+      <artifactId>neo4j-graphviz</artifactId>
+      <version>1.5-SNAPSHOT</version>
+      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.neo4j</groupId>
@@ -72,11 +78,6 @@
     <dependency>
       <groupId>org.neo4j</groupId>
       <artifactId>neo4j-kernel</artifactId>
-      <version>1.5-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>org.neo4j</groupId>
-      <artifactId>neo4j-graph-matching</artifactId>
       <version>1.5-SNAPSHOT</version>
     </dependency>
     <dependency>
@@ -91,24 +92,19 @@
         <artifactId>maven-scala-plugin</artifactId>
         <executions>
           <execution>
-            <id>compile</id>
+            <id>scala-compile</id>
             <goals>
+              <goal>add-source</goal>
               <goal>compile</goal>
             </goals>
-            <phase>compile</phase>
+            <phase>process-resources</phase>
           </execution>
           <execution>
-            <id>test-compile</id>
+            <id>scala-test-compile</id>
             <goals>
               <goal>testCompile</goal>
             </goals>
-            <phase>test-compile</phase>
-          </execution>
-          <execution>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>compile</goal>
-            </goals>
+            <phase>process-test-resources</phase>
           </execution>
         </executions>
       </plugin>

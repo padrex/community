@@ -19,118 +19,109 @@
  */
 package org.neo4j.server.rest;
 
-import org.junit.*;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.kernel.impl.annotations.Documented;
-import org.neo4j.server.NeoServerWithEmbeddedWebServer;
-import org.neo4j.server.database.DatabaseBlockedException;
-import org.neo4j.server.helpers.ServerHelper;
-import org.neo4j.server.rest.domain.GraphDbHelper;
-import org.neo4j.server.rest.domain.JsonHelper;
-import org.neo4j.server.rest.web.PropertyValueException;
-import org.neo4j.test.TestData;
-
-import javax.ws.rs.core.Response.Status;
-import java.io.IOException;
-import java.util.*;
-
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class TraverserFunctionalTest
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.ws.rs.core.Response.Status;
+
+import org.junit.Test;
+import org.neo4j.graphdb.Node;
+import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.impl.annotations.Documented;
+import org.neo4j.server.database.DatabaseBlockedException;
+import org.neo4j.server.rest.domain.JsonHelper;
+import org.neo4j.server.rest.web.PropertyValueException;
+import org.neo4j.test.GraphDescription.Graph;
+import org.neo4j.test.GraphDescription.NODE;
+
+public class TraverserFunctionalTest extends AbstractRestFunctionalTestBase
 {
-    private long startNode;
-    private long child1_l1;
-    private long child2_l1;
-    private long child1_l2;
-    private long child1_l3;
-    private long child2_l3;
 
-    private static NeoServerWithEmbeddedWebServer server;
-    private static FunctionalTestHelper functionalTestHelper;
-    private static GraphDbHelper helper;
-
-    @BeforeClass
-    public static void setupServer() throws IOException
-    {
-        server = ServerHelper.createServer();
-        functionalTestHelper = new FunctionalTestHelper( server );
-        helper = functionalTestHelper.getGraphDbHelper();
-    }
-
-    @Before
-    public void setupTheDatabase() throws Exception
-    {
-        ServerHelper.cleanTheDatabase( server );
-        createSmallGraph();
-    }
-
-    @AfterClass
-    public static void stopServer()
-    {
-        server.stop();
-    }
-
-    public @Rule
-    TestData<DocsGenerator> gen = TestData.producedThrough( DocsGenerator.PRODUCER );
-
-    private void createSmallGraph() throws Exception
-    {
-        Transaction tx = server.getDatabase().graph.beginTx();
-        startNode = helper.createNode( MapUtil.map( "name", "Root" ) );
-        child1_l1 = helper.createNode( MapUtil.map( "name", "Mattias" ) );
-        helper.createRelationship( "knows", startNode, child1_l1 );
-        child2_l1 = helper.createNode( MapUtil.map( "name", "Johan" ) );
-        helper.createRelationship( "knows", startNode, child2_l1 );
-        child1_l2 = helper.createNode( MapUtil.map( "name", "Emil" ) );
-        helper.createRelationship( "knows", child2_l1, child1_l2 );
-        child1_l3 = helper.createNode( MapUtil.map( "name", "Peter" ) );
-        helper.createRelationship( "knows", child1_l2, child1_l3 );
-        child2_l3 = helper.createNode( MapUtil.map( "name", "Tobias" ) );
-        helper.createRelationship( "loves", child1_l2, child2_l3 );
-        tx.success();
-        tx.finish();
-    }
-
-    private JaxRsResponse traverse(long node, String description)
-    {
-        return RestRequest.req().post(functionalTestHelper.nodeUri(node) + "/traverse/node", description);
-    }
 
     @Test
     public void shouldGet404WhenTraversingFromNonExistentNode()
     {
-        JaxRsResponse response = traverse(99999, "{}");
-        assertEquals( Status.NOT_FOUND.getStatusCode(), response.getStatus() );
-        response.close();
+        gen.get().expectedStatus( Status.NOT_FOUND.getStatusCode() ).payload(
+                "{}" ).post( getDataUri() + "node/10000/traverse/node" ).entity();
     }
 
     @Test
-    public void shouldGet200WhenNoHitsFromTraversing() throws DatabaseBlockedException
+    @Graph( nodes = {@NODE(name="I")} )
+    public void shouldGet200WhenNoHitsFromTraversing()
+            throws DatabaseBlockedException
     {
-        long node = helper.createNode();
-        JaxRsResponse response = traverse(node, "{}");
-        assertEquals( Status.OK.getStatusCode(), response.getStatus() );
-        response.close();
+        assertSize( 0,gen.get().expectedStatus( 200 ).payload( "" ).post(
+                getTraverseUriNodes( getNode( "I" ) ) ).entity());
+    }
+    
+    /**
+     * In order to return relationships,
+     * simply specify the return type as part of the URL.
+     */
+    @Test
+    @Graph( {"I know you", "I own car"} )
+    public void return_relationships_from_a_traversal()
+            throws DatabaseBlockedException
+    {
+        assertSize( 2, gen.get().expectedStatus( 200 ).payload( "{\"order\":\"breadth_first\",\"uniqueness\":\"none\",\"return_filter\":{\"language\":\"builtin\",\"name\":\"all\"}}" ).post(
+                getTraverseUriRelationships( getNode( "I" ) ) ).entity());
+    }
+
+    
+    /**
+     * In order to return paths from a traversal,
+     * specify the +Path+ return type as part of the URL.
+     */
+    @Test
+    @Graph( {"I know you", "I own car"} )
+    public void return_paths_from_a_traversal()
+            throws DatabaseBlockedException
+    {
+        assertSize( 3, gen.get().expectedStatus( 200 ).payload( "{\"order\":\"breadth_first\",\"uniqueness\":\"none\",\"return_filter\":{\"language\":\"builtin\",\"name\":\"all\"}}" ).post(
+                getTraverseUriPaths( getNode( "I" ) ) ).entity());
+    }
+    
+    
+    private String getTraverseUriRelationships( Node node )
+    {
+        return getNodeUri( node) + "/traverse/relationship";
+    }
+    private String getTraverseUriPaths( Node node )
+    {
+        return getNodeUri( node) + "/traverse/path";
+    }
+
+    private String getTraverseUriNodes( Node node )
+    {
+        // TODO Auto-generated method stub
+        return getNodeUri( node) + "/traverse/node";
     }
 
     @Test
-    public void shouldGetSomeHitsWhenTraversingWithDefaultDescription() throws PropertyValueException
+    @Graph( "I know you" )
+    @Documented
+    public void shouldGetSomeHitsWhenTraversingWithDefaultDescription()
+            throws PropertyValueException
     {
-        JaxRsResponse response = traverse(startNode, "");
-        assertEquals( Status.OK.getStatusCode(), response.getStatus() );
-        String entity = response.getEntity( String.class );
-        expectNodes( entity, child1_l1, child2_l1 );
-        response.close();
+        String entity = gen.get().expectedStatus( Status.OK.getStatusCode() ).payload( "{}" ).post(
+                getTraverseUriNodes( getNode( "I" ) ) ).entity();
+
+        expectNodes( entity, getNode( "you" ));
     }
 
-    private void expectNodes( String entity, long... nodes ) throws PropertyValueException
+    private void expectNodes( String entity, Node... nodes )
+            throws PropertyValueException
     {
         Set<String> expected = new HashSet<String>();
-        for ( long node : nodes )
+        for ( Node node : nodes )
         {
-            expected.add( functionalTestHelper.nodeUri( node ) );
+            expected.add( getNodeUri( node ) );
         }
         Collection<?> items = (Collection<?>) JsonHelper.jsonToSingleValue( entity );
         for ( Object item : items )
@@ -146,35 +137,65 @@ public class TraverserFunctionalTest
      * Traversal using a return filter.
      * 
      * In this example, the +none+ prune evaluator is used and a return filter
-     * is supplied. The result is to be returned as nodes and the max depth is
+     * is supplied in order to return all names containing "t". 
+     * The result is to be returned as nodes and the max depth is
      * set to 3.
      */
     @Documented
+    @Graph( {"Root knows Mattias", "Root knows Johan", "Johan knows Emil", "Emil knows Peter", "Emil knows Tobias", "Tobias loves Sara"} )
     @Test
-    public void shouldGetExpectedHitsWhenTraversingWithDescription() throws PropertyValueException
+    public void shouldGetExpectedHitsWhenTraversingWithDescription()
+            throws PropertyValueException
     {
+        Node start = getNode( "Root" );
         List<Map<String, Object>> rels = new ArrayList<Map<String, Object>>();
         rels.add( MapUtil.map( "type", "knows", "direction", "all" ) );
         rels.add( MapUtil.map( "type", "loves", "direction", "all" ) );
-        String description = JsonHelper.createJsonFrom( MapUtil.map( "order", "breadth_first", "uniqueness",
-                "node_global", "prune_evaluator", MapUtil.map( "language", "builtin", "name", "none" ),
-                "return_filter", MapUtil.map( "language", "javascript", "body",
-                        "position.endNode().getProperty('name').toLowerCase().contains('t')" ), "relationships", rels,
-                "max depth", 3 ) );
-        String entity = gen.get()
-                .expectedStatus( 200 )
-                .payload( description )
-                .post( functionalTestHelper.nodeUri( startNode ) + "/traverse/node" )
-                .entity();
-        expectNodes( entity, startNode, child1_l1, child1_l3, child2_l3 );
+        String description = JsonHelper.createJsonFrom( MapUtil.map(
+                "order",
+                "breadth_first",
+                "uniqueness",
+                "node_global",
+                "prune_evaluator",
+                MapUtil.map( "language", "builtin", "name", "none" ),
+                "return_filter",
+                MapUtil.map( "language", "javascript", "body",
+                        "position.endNode().getProperty('name').toLowerCase().contains('t')" ),
+                "relationships", rels, "max_depth", 3 ) );
+        String entity = gen.get().expectedStatus( 200 ).payload( description ).post(
+                getTraverseUriNodes( start ) ).entity();
+        expectNodes( entity, getNodes( "Root", "Mattias", "Peter", "Tobias" ) );
+    }
+    /**
+     * Traversal returning nodes below a certain depth.
+     * 
+     * Here, all nodes at a traversal depth below 3 are returned.
+     */
+    @Documented
+    @Graph( {"Root knows Mattias", "Root knows Johan", "Johan knows Emil", "Emil knows Peter", "Emil knows Tobias", "Tobias loves Sara"} )
+    @Test
+    public void shouldGetExpectedHitsWhenTraversingAtDepth()
+            throws PropertyValueException
+    {
+        Node start = getNode( "Root" );
+        String description = JsonHelper.createJsonFrom( MapUtil.map(
+                "prune_evaluator",
+                MapUtil.map( "language", "builtin", "name", "none" ),
+                "return_filter",
+                MapUtil.map( "language", "javascript", "body",
+                        "position.length()<3;" ) ) );
+        String entity = gen.get().expectedStatus( 200 ).payload( description ).post(
+                getTraverseUriNodes( start ) ).entity();
+        expectNodes( entity, getNodes( "Root", "Mattias", "Johan", "Emil" ) );
     }
 
     @Test
-    public void shouldGet400WhenSupplyingInvalidTraverserDescriptionFormat() throws DatabaseBlockedException
+    @Graph( "I know you" )
+    public void shouldGet400WhenSupplyingInvalidTraverserDescriptionFormat()
+            throws DatabaseBlockedException
     {
-        long node = helper.createNode();
-        JaxRsResponse response = traverse(node, "::not JSON{[ at all");
-        assertEquals( Status.BAD_REQUEST.getStatusCode(), response.getStatus() );
-        response.close();
+        gen.get().expectedStatus( Status.BAD_REQUEST.getStatusCode() ).payload(
+                "::not JSON{[ at all" ).post(
+                getTraverseUriNodes( getNode( "I" ) ) ).entity();
     }
 }

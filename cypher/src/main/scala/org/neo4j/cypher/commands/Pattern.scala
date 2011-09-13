@@ -20,13 +20,22 @@
 package org.neo4j.cypher.commands
 
 import org.neo4j.graphdb.Direction
-import scala.Some
 
-abstract class Pattern
-
-object RelatedTo {
-  def apply(left: String, right: String, relName: String, relType: String, direction: Direction) =
-    new RelatedTo(left, right, Some(relName), Some(relType), direction)
+abstract class Pattern {
+  val optional: Boolean
 }
 
-case class RelatedTo(left: String, right: String, relName: Option[String], relType: Option[String], direction: Direction) extends Pattern
+object RelatedTo {
+  def apply(left: String, right: String, relName: String, relType: String, direction: Direction, optional: Boolean = false) =
+    new RelatedTo(left, right, relName, Some(relType), direction, optional)
+}
+
+object VarLengthRelatedTo {
+  def apply(pathName: String, start: String, end: String, minHops: Int, maxHops: Int, relType: String, direction: Direction, optional: Boolean = false) =
+    new VarLengthRelatedTo(pathName, start, end, minHops, maxHops, Some(relType), direction, optional)
+}
+
+case class RelatedTo(left: String, right: String, relName: String, relType: Option[String], direction: Direction, optional:Boolean) extends Pattern
+
+case class VarLengthRelatedTo(pathName: String, start: String, end: String, minHops: Int, maxHops: Int, relType: Option[String], direction: Direction, optional: Boolean) extends Pattern
+

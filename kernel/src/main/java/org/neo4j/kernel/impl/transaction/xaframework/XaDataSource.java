@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.StringTokenizer;
 
 import org.neo4j.helpers.collection.ClosableIterable;
+import org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog.LogExtractor;
 import org.neo4j.kernel.impl.util.StringLogger;
 
 /**
@@ -167,20 +168,6 @@ public abstract class XaDataSource
     }
 
     /**
-     * Attempts to apply a logical log to this data source.
-     *
-     * @param byteChannel readable channel containing the logical log data
-     *
-     * @throws IOException if a problem with reading the log occurs
-     * @throws IllegalStateException if log being applied is not of right
-     * version, if not in backup slave mode or there are active transactions
-     */
-    public void applyLog( ReadableByteChannel byteChannel ) throws IOException
-    {
-        throw new UnsupportedOperationException( getClass().getName() );
-    }
-
-    /**
      * Rotates this logical log. If {@link #keepLogicalLogs(boolean)} is
      * configured to true the log will be saved and can be retrieved with the
      * {@link #getLogicalLog(long)} method. If not it will be deleted. Active
@@ -272,19 +259,6 @@ public abstract class XaDataSource
     }
 
     /**
-     * Makes this data source a backup slave. This method can not be called
-     * while there are active transactions. Once set in "backup slave" mode
-     * no new transactions can start, the resource has to be closed and
-     * reopened for that.
-     *
-     * @throws IllegalStateException if this resource has active transactions
-     */
-    public void makeBackupSlave()
-    {
-        throw new UnsupportedOperationException( getClass().getName() );
-    }
-
-    /**
      * Turns off/on auto rotate of logical logs. Default is <CODE>true</CODE>.
      *
      * @param rotate <CODE>true</CODE> to turn on
@@ -343,16 +317,6 @@ public abstract class XaDataSource
         return false;
     }
 
-    public ReadableByteChannel getCommittedTransaction( long txId ) throws IOException
-    {
-        throw new UnsupportedOperationException( getClass().getName() );
-    }
-
-    public void getCommittedTransaction( long tx, LogBuffer buffer ) throws IOException
-    {
-        throw new UnsupportedOperationException( getClass().getName() );
-    }
-
     public ReadableByteChannel getPreparedTransaction( int identifier ) throws IOException
     {
         throw new UnsupportedOperationException( getClass().getName() );
@@ -404,5 +368,10 @@ public abstract class XaDataSource
     public boolean setRecovered( boolean recovered )
     {
         return false;
+    }
+
+    public LogExtractor getLogExtractor( long startTxId, long endTxIdHint ) throws IOException
+    {
+        throw new UnsupportedOperationException( getClass().getName() );
     }
 }
