@@ -58,13 +58,13 @@ public final class TraversalDescriptionImpl implements TraversalDescription
     final SelectorOrderingPolicy selectorOrdering;
     final PathCollisionDetector collisionDetector;
     final Comparator<? super Path> sorting;
-    final Node endNode;
+    final Collection<Node> endNodes;
 
     private TraversalDescriptionImpl( Expander expander,
             UniquenessFactory uniqueness, Object uniquenessParameter,
             Evaluator evaluator, BranchOrderingPolicy branchSelector,
             SelectorOrderingPolicy selectorOrdering, PathCollisionDetector collisionDetector,
-            Comparator<? super Path> sorting, Node endNode )
+            Comparator<? super Path> sorting, Collection<Node> endNodes )
     {
         this.expander = expander;
         this.uniqueness = uniqueness;
@@ -74,7 +74,7 @@ public final class TraversalDescriptionImpl implements TraversalDescription
         this.selectorOrdering = selectorOrdering;
         this.collisionDetector = collisionDetector;
         this.sorting = sorting;
-        this.endNode = endNode;
+        this.endNodes = endNodes;
     }
 
     /* (non-Javadoc)
@@ -99,7 +99,7 @@ public final class TraversalDescriptionImpl implements TraversalDescription
     public TraversalDescription uniqueness( UniquenessFactory uniqueness )
     {
         return new TraversalDescriptionImpl( expander, uniqueness, null,
-                evaluator, branchSelector, selectorOrdering, collisionDetector, sorting, endNode );
+                evaluator, branchSelector, selectorOrdering, collisionDetector, sorting, endNodes );
     }
 
     /* (non-Javadoc)
@@ -118,7 +118,7 @@ public final class TraversalDescriptionImpl implements TraversalDescription
         }
 
         return new TraversalDescriptionImpl( expander, uniqueness, parameter,
-                evaluator, branchSelector, selectorOrdering, collisionDetector, sorting, endNode );
+                evaluator, branchSelector, selectorOrdering, collisionDetector, sorting, endNodes );
     }
     
     public TraversalDescription evaluator( Evaluator evaluator )
@@ -130,7 +130,7 @@ public final class TraversalDescriptionImpl implements TraversalDescription
         nullCheck( evaluator, Evaluator.class, "RETURN_ALL" );
         return new TraversalDescriptionImpl( expander, uniqueness, uniquenessParameter,
                 addEvaluator( evaluator ), branchSelector, selectorOrdering, collisionDetector,
-                sorting, endNode );
+                sorting, endNodes );
     }
     
     private Evaluator addEvaluator( Evaluator evaluator )
@@ -175,7 +175,7 @@ public final class TraversalDescriptionImpl implements TraversalDescription
             return this;
         }
         return new TraversalDescriptionImpl( expander, uniqueness, uniquenessParameter,
-                evaluator, selector, selectorOrdering, collisionDetector, sorting, endNode );
+                evaluator, selector, selectorOrdering, collisionDetector, sorting, endNodes );
     }
 
     public TraversalDescription depthFirst()
@@ -216,21 +216,21 @@ public final class TraversalDescriptionImpl implements TraversalDescription
         }
         return new TraversalDescriptionImpl( Traversal.expander( expander ), uniqueness,
                 uniquenessParameter, evaluator, branchSelector, selectorOrdering, collisionDetector,
-                sorting, endNode );
+                sorting, endNodes );
     }
     
     @Override
     public TraversalDescription bidirectional( SelectorOrderingPolicy selectorOrdering,
-            PathCollisionDetector collisionDetector, Node endNode )
+            PathCollisionDetector collisionDetector, Node endNode, Node... additionalEndNodes )
     {
         return new TraversalDescriptionImpl( expander, uniqueness, uniquenessParameter, evaluator,
-                branchSelector, selectorOrdering, collisionDetector, sorting, endNode );
+                branchSelector, selectorOrdering, collisionDetector, sorting, collectionOf( endNode, additionalEndNodes ) );
     }
     
     @Override
     public TraversalDescription sort( Comparator<? super Path> sorting )
     {
         return new TraversalDescriptionImpl( expander, uniqueness, uniquenessParameter, evaluator,
-                branchSelector, selectorOrdering, collisionDetector, sorting, endNode );
+                branchSelector, selectorOrdering, collisionDetector, sorting, endNodes );
     }
 }

@@ -224,7 +224,7 @@ class TraverserImpl implements Traverser
             BranchSelector startSelector = description.branchSelector.create(
                     new AsOneStartBranch( this, startNodes ), this, description.expander );
             BranchSelector endSelector = description.branchSelector.create(
-                    new AsOneStartBranch( this, asList( description.endNode ) ), this, description.expander.reversed() );
+                    new AsOneStartBranch( this, description.endNodes ), this, description.expander.reversed() );
             this.collisionDetector = description.collisionDetector;
             return description.selectorOrdering.create( startSelector, endSelector );
         }

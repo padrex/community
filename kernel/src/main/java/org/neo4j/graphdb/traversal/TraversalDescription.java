@@ -163,7 +163,7 @@ public interface TraversalDescription
     TraversalDescription expand( RelationshipExpander expander );
     
     TraversalDescription bidirectional( SelectorOrderingPolicy selectorOrdering,
-            PathCollisionDetector collisionDetector, Node endNode );
+            PathCollisionDetector collisionDetector, Node endNode, Node... additionalEndNode );
     
     TraversalDescription sort( Comparator<? super Path> comparator );
 
