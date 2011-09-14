@@ -81,6 +81,7 @@ public class ServerBuilder
     private Clock clock = null;
     private String[] autoIndexedNodeKeys = null;
     private String[] autoIndexedRelationshipKeys = null;
+    private boolean sslEnabled = false;
 
     public static ServerBuilder server()
     {
@@ -157,11 +158,14 @@ public class ServerBuilder
         
         if ( autoIndexedRelationshipKeys != null && autoIndexedRelationshipKeys.length > 0 )
         {
-            
             System.out.println("RELS HERE");
             writePropertyToFile( "relationship_auto_indexing", "true", temporaryConfigFile );
             String propertyKeys = org.apache.commons.lang.StringUtils.join( autoIndexedRelationshipKeys, "," );
             writePropertyToFile( "relationship_keys_indexable", propertyKeys, temporaryConfigFile );
+        }
+        
+        if(sslEnabled) {
+            writePropertyToFile( Configurator.WEBSERVER_SSL_ENABLED_PROPERTY_KEY, "true", temporaryConfigFile );
         }
     }
 
@@ -348,6 +352,12 @@ public class ServerBuilder
     public ServerBuilder withAutoIndexingEnabledForRelationships( String... keys )
     {
         autoIndexedRelationshipKeys = keys;
+        return this;
+    }
+
+    public ServerBuilder withSslEnabled()
+    {
+        sslEnabled  = true;
         return this;
     }
 }

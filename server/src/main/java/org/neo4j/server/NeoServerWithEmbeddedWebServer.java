@@ -37,7 +37,8 @@ import org.neo4j.server.modules.RESTApiModule;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.plugins.Injectable;
 import org.neo4j.server.plugins.PluginManager;
-import org.neo4j.server.rest.web.security.SslConfiguration;
+import org.neo4j.server.security.SslBootstrapper;
+import org.neo4j.server.security.SslConfiguration;
 import org.neo4j.server.startup.healthcheck.StartupHealthCheck;
 import org.neo4j.server.startup.healthcheck.StartupHealthCheckFailedException;
 import org.neo4j.server.web.WebServer;
@@ -185,7 +186,7 @@ public class NeoServerWithEmbeddedWebServer implements NeoServer
         webServer.setAddress( webServerAddr );
         webServer.setMaxThreads( maxThreads );
         
-        if(sslEnabled) {
+        if(sslEnabled || true) {
             int sslPort = getSslPort();
             SslConfiguration sslConfig = initSecureSockets();
             log.info( "Enabling HTTPS on port [%s]", sslPort );
@@ -247,8 +248,8 @@ public class NeoServerWithEmbeddedWebServer implements NeoServer
 
     protected SslConfiguration initSecureSockets()
     {
-        
-        return null;
+        SslBootstrapper sslBoot = new SslBootstrapper(configurator, getWebServerAddress());
+        return sslBoot.bootstrap();
     }
 
     @Override

@@ -28,7 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.mortbay.jetty.Server;
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.rest.web.security.SslConfiguration;
+import org.neo4j.server.security.SslConfiguration;
 
 public interface WebServer
 {
