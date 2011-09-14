@@ -37,6 +37,7 @@ import org.neo4j.server.modules.RESTApiModule;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.plugins.Injectable;
 import org.neo4j.server.plugins.PluginManager;
+import org.neo4j.server.rest.web.security.SslConfiguration;
 import org.neo4j.server.startup.healthcheck.StartupHealthCheck;
 import org.neo4j.server.startup.healthcheck.StartupHealthCheckFailedException;
 import org.neo4j.server.web.WebServer;
@@ -176,12 +177,20 @@ public class NeoServerWithEmbeddedWebServer implements NeoServer
         String webServerAddr = getWebServerAddress();
 
         int maxThreads = getMaxThreads();
+        
+        boolean sslEnabled = getSslEnabled();
 
         log.info( "Starting Neo Server on port [%s] with [%d] threads available", webServerPort, maxThreads );
         webServer.setPort( webServerPort );
         webServer.setAddress( webServerAddr );
-
         webServer.setMaxThreads( maxThreads );
+        
+        if(sslEnabled) {
+            int sslPort = getSslPort();
+            SslConfiguration sslConfig = initSecureSockets();
+            log.info( "Enabling HTTPS on port [%s]", sslPort );
+        }
+        
         webServer.init();
     }
 
@@ -217,11 +226,29 @@ public class NeoServerWithEmbeddedWebServer implements NeoServer
         return configurator.configuration()
                 .getInt( Configurator.WEBSERVER_PORT_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_PORT );
     }
+    
+    protected boolean getSslEnabled()
+    {
+        return configurator.configuration()
+                .getBoolean( Configurator.WEBSERVER_SSL_ENABLED_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_SSL_ENABLED );
+    }
+
+    protected int getSslPort()
+    {
+        return configurator.configuration()
+                .getInt( Configurator.WEBSERVER_SSL_PORT_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_SSL_PORT );
+    }
 
     protected String getWebServerAddress()
     {
        return configurator.configuration()
                 .getString( Configurator.WEBSERVER_ADDRESS_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_ADDRESS );
+    }
+
+    protected SslConfiguration initSecureSockets()
+    {
+        
+        return null;
     }
 
     @Override

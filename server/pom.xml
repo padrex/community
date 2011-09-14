@@ -297,6 +297,13 @@ the relevant Commercial Agreement.
       <artifactId>hamcrest-all</artifactId>
     </dependency>
 
+    <dependency>
+    	<groupId>bouncycastle</groupId>
+    	<artifactId>bcprov-jdk15</artifactId>
+    	<version>140</version>
+    	<type>jar</type>
+    	<scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <build>
