@@ -81,7 +81,7 @@ public class ServerBuilder
     private Clock clock = null;
     private String[] autoIndexedNodeKeys = null;
     private String[] autoIndexedRelationshipKeys = null;
-    private Boolean sslEnabled = null;
+    private Boolean httpsEnabled = null;
     private String host = null;
     private Boolean httpEnabled = null;
 
@@ -170,8 +170,8 @@ public class ServerBuilder
             writePropertyToFile( "relationship_keys_indexable", propertyKeys, temporaryConfigFile );
         }
         
-        if(sslEnabled != null) {
-            if(sslEnabled) {
+        if(httpsEnabled != null) {
+            if(httpsEnabled) {
                 writePropertyToFile( Configurator.WEBSERVER_HTTPS_ENABLED_PROPERTY_KEY, "true", temporaryConfigFile );
             } else {
                 writePropertyToFile( Configurator.WEBSERVER_HTTPS_ENABLED_PROPERTY_KEY, "false", temporaryConfigFile );
@@ -375,13 +375,13 @@ public class ServerBuilder
 
     public ServerBuilder withSslEnabled()
     {
-        sslEnabled  = true;
+        httpsEnabled  = true;
         return this;
     }
 
     public ServerBuilder withSslDisabled()
     {
-        sslEnabled  = false;
+        httpsEnabled  = false;
         return this;
     }
     

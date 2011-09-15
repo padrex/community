@@ -60,12 +60,14 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 public class Jetty6WebServer implements WebServer
 {
+    private static final int DEFAULT_HTTPS_PORT = 7473;
     public static final Logger log = Logger.getLogger( Jetty6WebServer.class );
     public static final int DEFAULT_PORT = 7474;
     public static final String DEFAULT_ADDRESS = "localhost";
 
     private Server jetty;
     private int jettyHttpPort = DEFAULT_PORT;
+    private int jettyHttpsPort = DEFAULT_HTTPS_PORT;
     private String jettyAddr = DEFAULT_ADDRESS;
 
     private final HashMap<String, String> staticContent = new HashMap<String, String>();
@@ -74,9 +76,8 @@ public class Jetty6WebServer implements WebServer
     private NeoServer server;
     private int jettyMaxThreads = tenThreadsPerProcessor();
     private boolean httpEnabled = true;
-    private boolean httpsEnabled = true;
+    private boolean httpsEnabled = false;
     private HttpsConfiguration httpsConfig = null;
-    private int jettyHttpsPort = 7473;
 
     @Override
     public void init()
@@ -95,7 +96,11 @@ public class Jetty6WebServer implements WebServer
             }
             
             if(httpsEnabled) {
-               jetty.addConnector( SslSocketConnectorFactory.createConnector(httpsConfig, jettyAddr, jettyHttpsPort) );
+               if(httpsConfig != null) {
+                   jetty.addConnector( SslSocketConnectorFactory.createConnector(httpsConfig, jettyAddr, jettyHttpsPort) );
+               } else {
+                   throw new RuntimeException("HTTPS set to enabled, but no HTTPS configuration provided.");
+               }
             }
             
             jetty.setThreadPool( new QueuedThreadPool( jettyMaxThreads ) );
