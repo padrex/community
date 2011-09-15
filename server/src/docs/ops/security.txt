@@ -21,6 +21,40 @@ org.neo4j.server.webserver.port=7474
 #org.neo4j.server.webserver.address=0.0.0.0
 ----
 
+== HTTPS support ==
+
+The Neo4j server includes built in support for SSL encrypted communication using HTTPS. 
+The first time the server starts, it automatically generates a self-signed ssl certificate and a private key.
+Because the certificate is self signed, it is not safe to rely on for production use, instead, you should provide your own key and certificate for the server to use.
+
+To provide your own key and certificate, replace the generated key and certificate, or change the neo4j-server.properties file to set the location of your certififacate and key:
+
+[source]
+----
+# Certificate location (auto generated if the file does not exist)
+org.neo4j.server.webserver.https.cert.location=ssl/snakeoil.cert
+
+# Private key location (auto generated if the file does not exist)
+org.neo4j.server.webserver.https.key.location=ssl/snakeoil.key
+----
+
+Note that the key should be unencrypted. 
+The server does not support password-protected keys, since the password would be stored in clear text on the same file system either way.
+Make sure you set correct permissions to the private key, so that only the neo4j server user can read/write it.
+
+You can set what port the https connector should bind to in the same configuration file, as well as turn https off:
+
+[source]
+----
+# Turn https-support on/off
+org.neo4j.server.webserver.https.enabled=true
+
+# https port (for all data, administrative, and UI access)
+org.neo4j.server.webserver.https.port=443
+----
+
+== Authentication / authorization ==
+
 The Neo4j server currently does not enforce security on the REST access layer.
 This should be taken care of by external means.
 We strongly recommend to front a running Neo4j Server with a proxy like Apache `mod_proxy` footnote:[http://httpd.apache.org/docs/2.2/mod/mod_proxy.html].
