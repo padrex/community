@@ -37,8 +37,8 @@ import org.neo4j.server.modules.RESTApiModule;
 import org.neo4j.server.modules.ServerModule;
 import org.neo4j.server.plugins.Injectable;
 import org.neo4j.server.plugins.PluginManager;
-import org.neo4j.server.security.SslBootstrapper;
-import org.neo4j.server.security.SslConfiguration;
+import org.neo4j.server.security.HttpsBootstrapper;
+import org.neo4j.server.security.HttpsConfiguration;
 import org.neo4j.server.startup.healthcheck.StartupHealthCheck;
 import org.neo4j.server.startup.healthcheck.StartupHealthCheckFailedException;
 import org.neo4j.server.web.WebServer;
@@ -174,22 +174,34 @@ public class NeoServerWithEmbeddedWebServer implements NeoServer
 
     private void initWebServer()
     {
-        int webServerPort = getWebServerPort();
+        int webServerHttpPort = getWebServerPort();
         String webServerAddr = getWebServerAddress();
 
         int maxThreads = getMaxThreads();
         
-        boolean sslEnabled = getSslEnabled();
+        boolean httpsEnabled = getHttpsEnabled();
+        boolean httpEnabled = getHttpEnabled();
 
-        log.info( "Starting Neo Server on port [%s] with [%d] threads available", webServerPort, maxThreads );
-        webServer.setPort( webServerPort );
+        log.info( "Starting Neo Server with [%d] threads available", maxThreads );
+        
         webServer.setAddress( webServerAddr );
         webServer.setMaxThreads( maxThreads );
+        webServer.setHttpsEnabled(httpsEnabled);
+        webServer.setHttpEnabled(httpEnabled);
         
-        if(sslEnabled || true) {
-            int sslPort = getSslPort();
-            SslConfiguration sslConfig = initSecureSockets();
-            log.info( "Enabling HTTPS on port [%s]", sslPort );
+        if(httpEnabled) {
+            log.info( "Enabling HTTP on port [%s]", webServerHttpPort );
+            webServer.setHttpPort( webServerHttpPort );
+        }
+       
+        if(httpsEnabled) {
+            int webServerHttpsPort = getHttpsPort();
+            HttpsConfiguration httpsConfig = initHttps();
+            log.info( "Enabling HTTPS on port [%s]", webServerHttpsPort );
+
+            webServer.setHttpsEnabled(true);
+            webServer.setHttpsPort(webServerHttpsPort);
+            webServer.setHttpsConfiguration(httpsConfig);
         }
         
         webServer.init();
@@ -213,12 +225,17 @@ public class NeoServerWithEmbeddedWebServer implements NeoServer
         try
         {
             webServer.start();
-            log.info( "Server started on [%s]", baseUri() );
+            if(getHttpEnabled() ) {
+                log.info( "Server HTTP listener started on [%s]", baseUri() );
+            }
+            if(getHttpsEnabled()) {
+                log.info( "Server HTTPS listener started on [%s]", sslUri() );
+            }
         }
         catch ( Exception e )
         {
             e.printStackTrace();
-            log.error( "Failed to start Neo Server on port [%d], reason [%s]", getWebServerPort(), e.getMessage() );
+            log.error( "Failed to start Neo Server, reason [%s]", e.getMessage() );
         }
     }
 
@@ -228,16 +245,22 @@ public class NeoServerWithEmbeddedWebServer implements NeoServer
                 .getInt( Configurator.WEBSERVER_PORT_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_PORT );
     }
     
-    protected boolean getSslEnabled()
+    protected boolean getHttpEnabled()
     {
         return configurator.configuration()
-                .getBoolean( Configurator.WEBSERVER_SSL_ENABLED_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_SSL_ENABLED );
+                .getBoolean( Configurator.WEBSERVER_HTTP_ENABLED_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_HTTP_ENABLED );
+    }
+    
+    protected boolean getHttpsEnabled()
+    {
+        return configurator.configuration()
+                .getBoolean( Configurator.WEBSERVER_HTTPS_ENABLED_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_HTTPS_ENABLED );
     }
 
-    protected int getSslPort()
+    protected int getHttpsPort()
     {
         return configurator.configuration()
-                .getInt( Configurator.WEBSERVER_SSL_PORT_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_SSL_PORT );
+                .getInt( Configurator.WEBSERVER_HTTPS_PORT_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_HTTPS_PORT );
     }
 
     protected String getWebServerAddress()
@@ -246,9 +269,9 @@ public class NeoServerWithEmbeddedWebServer implements NeoServer
                 .getString( Configurator.WEBSERVER_ADDRESS_PROPERTY_KEY, Configurator.DEFAULT_WEBSERVER_ADDRESS );
     }
 
-    protected SslConfiguration initSecureSockets()
+    protected HttpsConfiguration initHttps()
     {
-        SslBootstrapper sslBoot = new SslBootstrapper(configurator, getWebServerAddress());
+        HttpsBootstrapper sslBoot = new HttpsBootstrapper(configurator, getWebServerAddress());
         return sslBoot.bootstrap();
     }
 
@@ -315,6 +338,32 @@ public class NeoServerWithEmbeddedWebServer implements NeoServer
     public Database getDatabase()
     {
         return database;
+    }
+
+    @Override
+    public URI sslUri()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append( "https" );
+        int webServerPort = getHttpsPort();
+        sb.append( "://" );
+        sb.append( getWebServerAddress() );
+
+        if ( webServerPort != 443 )
+        {
+            sb.append( ":" );
+            sb.append( webServerPort );
+        }
+        sb.append( "/" );
+
+        try
+        {
+            return new URI( sb.toString() );
+        }
+        catch ( URISyntaxException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 
     @Override

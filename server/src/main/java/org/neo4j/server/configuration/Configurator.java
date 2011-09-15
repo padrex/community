@@ -60,23 +60,23 @@ public interface Configurator
 
     String THIRD_PARTY_PACKAGES_KEY = "org.neo4j.server.thirdparty_jaxrs_classes";
     
-    String WEBSERVER_SSL_ENABLED_PROPERTY_KEY = "org.neo4j.server.webserver.ssl.enabled";
-    Boolean DEFAULT_WEBSERVER_SSL_ENABLED = false;
+    String WEBSERVER_HTTP_ENABLED_PROPERTY_KEY = "org.neo4j.server.webserver.http.enabled";;
+    Boolean DEFAULT_WEBSERVER_HTTP_ENABLED = true;
     
-    String WEBSERVER_SSL_PORT_PROPERTY_KEY = "org.neo4j.server.webserver.ssl.port";
-    int DEFAULT_WEBSERVER_SSL_PORT = 7473;
+    String WEBSERVER_HTTPS_ENABLED_PROPERTY_KEY = "org.neo4j.server.webserver.https.enabled";
+    Boolean DEFAULT_WEBSERVER_HTTPS_ENABLED = true;
     
-    String WEBSERVER_SSL_KEYSTORE_PATH_PROPERTY_KEY = "org.neo4j.server.webserver.ssl.keystore.path";
-    String DEFAULT_WEBSERVER_SSL_KEYSTORE_PATH = "keystore";
+    String WEBSERVER_HTTPS_PORT_PROPERTY_KEY = "org.neo4j.server.webserver.https.port";
+    int DEFAULT_WEBSERVER_HTTPS_PORT = 7473;
     
-    String WEBSERVER_SSL_KEY_PASSWORD_PROPERTY_KEY = "org.neo4j.server.webserver.ssl.keystore.password";
-    String DEFAULT_WEBSERVER_SSL_KEY_PASSWORD = "Change this to a password of your own.";
+    String WEBSERVER_KEYSTORE_PATH_PROPERTY_KEY = "org.neo4j.server.webserver.https.keystore.location";
+    String DEFAULT_WEBSERVER_KEYSTORE_PATH = "ssl/keystore";
     
-    String WEBSERVER_SSL_KEYSTORE_PASSWORD_PROPERTY_KEY = "org.neo4j.server.webserver.ssl.key.password";
-    String DEFAULT_WEBSERVER_SSL_KEYSTORE_PASSWORD = "Change this to a password of your own.";
+    String WEBSERVER_HTTPS_CERT_PATH_PROPERTY_KEY = "org.neo4j.server.webserver.https.cert.location";
+    String DEFAULT_WEBSERVER_HTTPS_CERT_PATH = "ssl/snakeoil.cert";
     
-    String WEBSERVER_SSL_CERT_PATH_PROPERTY_KEY = "org.neo4j.server.webserver.ssl.cert";
-    String DEFAULT_WEBSERVER_SSL_CERT_PATH = "snakeoil.cert";
+    String WEBSERVER_HTTPS_KEY_PATH_PROPERTY_KEY = "org.neo4j.server.webserver.https.key.location";
+    String DEFAULT_WEBSERVER_HTTPS_KEY_PATH = "ssl/snakeoil.key";
 
     Configuration configuration();
 

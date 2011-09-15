@@ -28,7 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.mortbay.jetty.Server;
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.security.SslConfiguration;
+import org.neo4j.server.security.HttpsConfiguration;
 
 public interface WebServer
 {
@@ -36,15 +36,17 @@ public interface WebServer
 
     void setNeoServer( NeoServer server );
 
-    void setPort( int portNo );
+    void setHttpPort( int portNo );
 
     void setAddress( String addr );
+
+    void setHttpsEnabled( boolean enable );
     
-    void setEnableSsl( boolean enable );
+    void setHttpEnabled( boolean enable );
     
-    void setSslPort( int portNo );
+    void setHttpsPort( int portNo );
     
-    void setSslConfiguration( SslConfiguration config );
+    void setHttpsConfiguration( HttpsConfiguration config );
 
     void start();
 

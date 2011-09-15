@@ -39,7 +39,6 @@ import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.nio.SelectChannelConnector;
-import org.mortbay.jetty.security.SslSocketConnector;
 
 import org.mortbay.jetty.SessionManager;
 import org.mortbay.jetty.handler.MovedContextHandler;
@@ -53,7 +52,7 @@ import org.mortbay.thread.QueuedThreadPool;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.logging.Logger;
 import org.neo4j.server.rest.web.AllowAjaxFilter;
-import org.neo4j.server.security.SslConfiguration;
+import org.neo4j.server.security.HttpsConfiguration;
 import org.neo4j.server.security.SslSocketConnectorFactory;
 
 import com.sun.jersey.api.core.ResourceConfig;
@@ -62,11 +61,11 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 public class Jetty6WebServer implements WebServer
 {
     public static final Logger log = Logger.getLogger( Jetty6WebServer.class );
-    public static final int DEFAULT_PORT = 80;
-    public static final String DEFAULT_ADDRESS = "0.0.0.0";
+    public static final int DEFAULT_PORT = 7474;
+    public static final String DEFAULT_ADDRESS = "localhost";
 
     private Server jetty;
-    private int jettyPort = DEFAULT_PORT;
+    private int jettyHttpPort = DEFAULT_PORT;
     private String jettyAddr = DEFAULT_ADDRESS;
 
     private final HashMap<String, String> staticContent = new HashMap<String, String>();
@@ -74,9 +73,10 @@ public class Jetty6WebServer implements WebServer
 
     private NeoServer server;
     private int jettyMaxThreads = tenThreadsPerProcessor();
-    private boolean sslEnabled = false;
-    private SslConfiguration sslConfig = null;
-    private int jettySslPort = 7473;
+    private boolean httpEnabled = true;
+    private boolean httpsEnabled = true;
+    private HttpsConfiguration httpsConfig = null;
+    private int jettyHttpsPort = 7473;
 
     @Override
     public void init()
@@ -84,15 +84,18 @@ public class Jetty6WebServer implements WebServer
         if ( jetty == null )
         {
             jetty = new Server();
-            Connector connector = new SelectChannelConnector();
             
-            connector.setPort( jettyPort );
-            connector.setHost( jettyAddr );
+            if(httpEnabled){
+                Connector connector = new SelectChannelConnector();
+                
+                connector.setPort( jettyHttpPort );
+                connector.setHost( jettyAddr );
+                
+                jetty.addConnector( connector );
+            }
             
-            jetty.addConnector( connector );
-            
-            if(sslEnabled) {
-               jetty.addConnector( SslSocketConnectorFactory.createConnector(sslConfig, jettyAddr, jettySslPort) );
+            if(httpsEnabled) {
+               jetty.addConnector( SslSocketConnectorFactory.createConnector(httpsConfig, jettyAddr, jettyHttpsPort) );
             }
             
             jetty.setThreadPool( new QueuedThreadPool( jettyMaxThreads ) );
@@ -114,9 +117,9 @@ public class Jetty6WebServer implements WebServer
     }
 
     @Override
-    public void setPort( int portNo )
+    public void setHttpPort( int portNo )
     {
-        jettyPort = portNo;
+        jettyHttpPort = portNo;
     }
 
     @Override
@@ -192,18 +195,23 @@ public class Jetty6WebServer implements WebServer
     }
     
     @Override
-    public void setEnableSsl( boolean enable ) {
-        sslEnabled = enable;
+    public void setHttpEnabled( boolean enable ) {
+        httpEnabled  = enable;
     }
     
     @Override
-    public void setSslPort( int portNo )  {
-        jettySslPort = portNo;
+    public void setHttpsEnabled( boolean enable ) {
+        httpsEnabled = enable;
     }
     
     @Override
-    public void setSslConfiguration( SslConfiguration config ) {
-        sslConfig = config;
+    public void setHttpsPort( int portNo )  {
+        jettyHttpsPort = portNo;
+    }
+    
+    @Override
+    public void setHttpsConfiguration( HttpsConfiguration config ) {
+        httpsConfig = config;
     }
     
 
@@ -325,7 +333,7 @@ public class Jetty6WebServer implements WebServer
             {
                 log.error(
                         "No static content available for Neo Server at port [%d], management console may not be available.",
-                        jettyPort );
+                        jettyHttpPort );
             }
         }
         catch ( Exception e )

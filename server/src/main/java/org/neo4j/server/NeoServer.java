@@ -46,4 +46,6 @@ public interface NeoServer
     Collection<Injectable<?>> getInjectables( List<String> packageNames );
 
     URI baseUri();
+
+    URI sslUri();
 }

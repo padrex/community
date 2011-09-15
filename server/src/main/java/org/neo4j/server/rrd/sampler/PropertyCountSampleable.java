@@ -17,9 +17,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.server.rrd;
+package org.neo4j.server.rrd.sampler;
 
-public interface JobScheduler
+import org.neo4j.kernel.AbstractGraphDatabase;
+import org.neo4j.kernel.impl.nioneo.store.PropertyStore;
+
+public class PropertyCountSampleable extends DatabasePrimitivesSampleableBase
 {
-    void scheduleAtFixedRate( Runnable job, String jobName, long period );
+    public PropertyCountSampleable( AbstractGraphDatabase db )
+    {
+        super( db );
+    }
+
+    @Override public String getName()
+    {
+        return "property_count";
+    }
+
+    @Override public double getValue()
+    {
+        return getNodeManager().getNumberOfIdsInUse( PropertyStore.class );
+    }
 }

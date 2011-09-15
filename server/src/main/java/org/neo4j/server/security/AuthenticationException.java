@@ -17,9 +17,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.server.rrd;
+package org.neo4j.server.security;
 
-public interface JobScheduler
+/**
+ * <p>
+ * A runtime exception representing a failure to provide correct authentication
+ * credentials.
+ * </p>
+ */
+public class AuthenticationException extends RuntimeException
 {
-    void scheduleAtFixedRate( Runnable job, String jobName, long period );
+
+    private static final long serialVersionUID = 3662922094534872711L;
+
+    private String realm;
+
+    public AuthenticationException( String msg, String realm )
+    {
+        super( msg );
+        this.realm = realm;
+    }
+
+    public String getRealm()
+    {
+        return this.realm;
+    }
+
 }

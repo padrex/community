@@ -81,7 +81,9 @@ public class ServerBuilder
     private Clock clock = null;
     private String[] autoIndexedNodeKeys = null;
     private String[] autoIndexedRelationshipKeys = null;
-    private boolean sslEnabled = false;
+    private Boolean sslEnabled = null;
+    private String host = null;
+    private Boolean httpEnabled = null;
 
     public static ServerBuilder server()
     {
@@ -136,6 +138,10 @@ public class ServerBuilder
         {
             writePropertyToFile( Configurator.WEBSERVER_PORT_PROPERTY_KEY, portNo, temporaryConfigFile );
         }
+        if ( host != null )
+        {
+            writePropertyToFile( Configurator.WEBSERVER_ADDRESS_PROPERTY_KEY, host, temporaryConfigFile );
+        }
         if ( maxThreads != null )
         {
             writePropertyToFile( Configurator.WEBSERVER_MAX_THREADS_PROPERTY_KEY, maxThreads, temporaryConfigFile );
@@ -164,9 +170,21 @@ public class ServerBuilder
             writePropertyToFile( "relationship_keys_indexable", propertyKeys, temporaryConfigFile );
         }
         
-        if(sslEnabled) {
-            writePropertyToFile( Configurator.WEBSERVER_SSL_ENABLED_PROPERTY_KEY, "true", temporaryConfigFile );
+        if(sslEnabled != null) {
+            if(sslEnabled) {
+                writePropertyToFile( Configurator.WEBSERVER_HTTPS_ENABLED_PROPERTY_KEY, "true", temporaryConfigFile );
+            } else {
+                writePropertyToFile( Configurator.WEBSERVER_HTTPS_ENABLED_PROPERTY_KEY, "false", temporaryConfigFile );
+            }
         }
+        
+        if(httpEnabled != null) {
+            if(httpEnabled) {
+                writePropertyToFile( Configurator.WEBSERVER_HTTP_ENABLED_PROPERTY_KEY, "true", temporaryConfigFile );
+            } else {
+                writePropertyToFile( Configurator.WEBSERVER_HTTP_ENABLED_PROPERTY_KEY, "false", temporaryConfigFile );
+            }
+        } 
     }
 
     private void createTuningFile( File temporaryConfigFile ) throws IOException
@@ -358,6 +376,27 @@ public class ServerBuilder
     public ServerBuilder withSslEnabled()
     {
         sslEnabled  = true;
+        return this;
+    }
+
+    public ServerBuilder withSslDisabled()
+    {
+        sslEnabled  = false;
+        return this;
+    }
+    
+    public ServerBuilder onHost(String host) {
+        this.host  = host;
+        return this;
+    }
+
+    public ServerBuilder withHttpConnectorDisabled() {
+        this.httpEnabled = false;
+        return this;
+    }
+
+    public ServerBuilder withHttpConnectorEnabled() {
+        this.httpEnabled = true;
         return this;
     }
 }

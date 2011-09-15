@@ -17,9 +17,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.server.rrd;
+package org.neo4j.server.security;
 
-public interface JobScheduler
-{
-    void scheduleAtFixedRate( Runnable job, String jobName, long period );
+import org.mortbay.jetty.security.SslSocketConnector;
+
+public class SslSocketConnectorFactory {
+
+    public static SslSocketConnector createConnector(HttpsConfiguration config, String host, int port) {
+        SslSocketConnector connector = new SslSocketConnector();
+        
+        connector.setPort( port );
+        connector.setHost( host );
+        
+        connector.setKeyPassword(String.valueOf(config.getKeyPassword()));
+        connector.setPassword(String.valueOf(config.getKeyStorePassword()));
+        connector.setKeystore(config.getKeyStorePath());
+        
+        return connector; 
+    }
+    
 }

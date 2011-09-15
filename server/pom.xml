@@ -225,12 +225,10 @@ the relevant Commercial Agreement.
       <scope>test</scope>
     </dependency>
 
-    <!-- dependency> <groupId>org.rrd4j</groupId> <artifactId>rrd4j</artifactId> <version>2.0.6</version> </dependency -->
-
     <dependency>
-      <groupId>de.huxhorn.lilith</groupId>
-      <artifactId>de.huxhorn.lilith.3rdparty.rrd4j</artifactId>
-      <version>2.0.5</version>
+      <groupId>org.rrd4j</groupId>
+      <artifactId>rrd4j</artifactId>
+      <version>2.0.7</version>
     </dependency>
 
     <!-- File uploads -->
@@ -381,6 +379,34 @@ the relevant Commercial Agreement.
               <goal>single</goal>
             </goals>
           </execution>
+          <execution>
+            <id>sources</id>
+            <phase>package</phase>
+            <configuration>
+              <attach>true</attach>
+              <appendAssemblyId>true</appendAssemblyId>
+              <descriptors>
+                <descriptor>src/main/assemblies/sources-assembly.xml</descriptor>
+              </descriptors>
+            </configuration>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>test-sources</id>
+            <phase>package</phase>
+            <configuration>
+              <attach>true</attach>
+              <appendAssemblyId>true</appendAssemblyId>
+              <descriptors>
+                <descriptor>src/main/assemblies/test-sources-assembly.xml</descriptor>
+              </descriptors>
+            </configuration>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
         </executions>
       </plugin>
 
@@ -475,6 +501,15 @@ the relevant Commercial Agreement.
                 </resource>
               </resources>
             </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-source-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-source</id>
+            <phase>none</phase>
           </execution>
         </executions>
       </plugin>

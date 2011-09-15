@@ -17,28 +17,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.server.rrd;
+package org.neo4j.server.security;
 
-import javax.management.MalformedObjectNameException;
+public class HttpsConfiguration {
 
-import org.neo4j.server.database.Database;
-
-public class RelationshipCountSampleable extends DatabasePrimitivesSampleableBase
-{
-    public RelationshipCountSampleable( Database db ) throws MalformedObjectNameException
-    {
-        super( db );
+    private final String keyStorePath;
+    private final char[] keyStorePassword;
+    private final char[] keyPassword;
+    
+    public HttpsConfiguration(String keyStorePath, char[] keyStorePassword, char[] keyPassword) {
+        this.keyStorePassword = keyStorePassword;
+        this.keyStorePath = keyStorePath;
+        this.keyPassword = keyPassword;
+    }
+    
+    public String getKeyStorePath() {
+        return keyStorePath;
+    }
+    
+    public char[] getKeyStorePassword() {
+        return keyStorePassword;
     }
 
-    @Override
-    public String getName()
-    {
-        return "relationship_count";
+    public char[] getKeyPassword() {
+        return keyPassword;
     }
-
-    @Override
-    protected String getJmxAttributeName()
-    {
-        return "NumberOfRelationshipIdsInUse";
-    }
+    
 }
