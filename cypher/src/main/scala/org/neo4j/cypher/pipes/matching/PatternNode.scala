@@ -20,29 +20,30 @@
 package org.neo4j.cypher.pipes.matching
 
 import org.neo4j.graphdb.{Direction, Node}
+import collection.Seq
 
 class PatternNode(key: String) extends PatternElement(key) with PinnablePatternElement[Node] {
   val relationships = scala.collection.mutable.Set[PatternRelationship]()
 
-  def getPRels(history: Seq[MatchingPair]): Seq[PatternRelationship] = relationships.filterNot( r => history.exists(_.matches(r)) ).toSeq
+  def getPRels(history: Seq[MatchingPair]): Seq[PatternRelationship] = relationships.filterNot(r => history.exists(_.matches(r))).toSeq
 
-  def getGraphRelationships(node: Node, pRel: PatternRelationship, history:Seq[MatchingPair]): Seq[GraphRelationship] = {
+  def getGraphRelationships(node: Node, pRel: PatternRelationship, history: Seq[MatchingPair]): Seq[GraphRelationship] = {
     val relationships = pRel.getGraphRelationships(this, node)
-//    println(String.format("found real relationships: %s\n", relationships.toList))
-    relationships.filterNot( gr => gr match {
+    //    println(String.format("found real relationships: %s\n", relationships.toList))
+    relationships.filterNot(gr => gr match {
       case SingleGraphRelationship(r) => history.exists(h => h.matches(r))
       case VariableLengthGraphRelationship(p) => history.exists(h => h.matches(p))
     }).toSeq
   }
 
-  def relateTo(key: String, other: PatternNode, relType: Option[String], dir: Direction, optional:Boolean): PatternRelationship = {
+  def relateTo(key: String, other: PatternNode, relType: Option[String], dir: Direction, optional: Boolean): PatternRelationship = {
     val rel = new PatternRelationship(key, this, other, relType, dir, optional)
     relationships.add(rel)
     other.relationships.add(rel)
     rel
   }
 
-  def relateViaVariableLengthPathTo(pathName: String, end: PatternNode, minHops: Int, maxHops: Int, relType: Option[String], dir: Direction, optional:Boolean): PatternRelationship = {
+  def relateViaVariableLengthPathTo(pathName: String, end: PatternNode, minHops: Int, maxHops: Int, relType: Option[String], dir: Direction, optional: Boolean): PatternRelationship = {
     val rel = new VariableLengthPatternRelationship(pathName, this, end, minHops, maxHops, relType, dir, optional)
     relationships.add(rel)
     end.relationships.add(rel)
@@ -50,4 +51,42 @@ class PatternNode(key: String) extends PatternElement(key) with PinnablePatternE
   }
 
   override def toString = String.format("PatternNode[key=%s]", key)
+}
+
+object shortestPaths {
+  type Path = Seq[PatternElement]
+
+  def apply(start: PatternNode, end: Seq[PatternNode]): Seq[Path] = findShortestPaths(Seq(Seq(start)), end.map(Seq(_))  )
+
+  private def findShortestPaths(startPaths: Seq[Path], endPaths: Seq[Path]): Seq[Path] = {
+    val combinations: Seq[(shortestPaths.Path, shortestPaths.Path)] = startPaths.map(s => endPaths.map(e => (s, e))).flatten
+
+    val pathsWithSharedElements: Seq[(Path, Path)] = combinations.filter(x => x match {
+      case (s, e) => s.exists(e.contains(_))
+    })
+
+    if (pathsWithSharedElements.isEmpty)
+      {
+        val expandedStarts = startPaths.map(expandOneLevel).flatten
+        val expandedEnds = endPaths.map(expandOneLevel).flatten
+        findShortestPaths(expandedStarts, expandedEnds)
+      }
+    else
+      pathsWithSharedElements.map(x => x match {
+        case (a, b) => a ++ b.reverse.dropWhile( a.contains(_) )
+      })
+  }
+
+  private def expandOneLevel(path: Path): Seq[Path] = path match {
+    case Seq(x) => {
+      val lastNode = x.asInstanceOf[PatternNode]
+      lastNode.getPRels(Seq()).map(r => Seq(x, r, r.getOtherNode(lastNode)))
+    }
+    case x => {
+      val lastNode = x.tail.asInstanceOf[PatternNode]
+      val lastRel = x.takeRight(2).head.asInstanceOf[PatternRelationship]
+      lastNode.getPRels(Seq()).filterNot(_ == lastRel).map(r => x ++ Seq(r, r.getOtherNode(lastNode)))
+    }
+
+  }
 }
