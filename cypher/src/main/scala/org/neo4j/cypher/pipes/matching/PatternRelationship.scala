@@ -29,17 +29,26 @@ class PatternRelationship(key: String,
                           val rightNode: PatternNode,
                           relType: Option[String],
                           dir: Direction,
-                          val optional:Boolean)
+                          val optional: Boolean)
   extends PatternElement(key)
   with PinnablePatternElement[Relationship] {
 
-  def getOtherNode(node: PatternNode) = if(leftNode==node) rightNode else leftNode
+  def getDirectionFrom(node: PatternNode): Direction = (dir, leftNode == node) match {
+    case (Direction.BOTH, true) => Direction.OUTGOING
+    case (Direction.BOTH, false) => Direction.INCOMING
+    case (Direction.OUTGOING, x) => if (x) Direction.OUTGOING else Direction.INCOMING
+    case (Direction.INCOMING, x) => if (x) Direction.INCOMING else Direction.OUTGOING
+  }
+
+  def getOtherNode(node: PatternNode) = if (leftNode == node) rightNode else leftNode
+
   def getGraphRelationships(node: PatternNode, realNode: Node): Seq[GraphRelationship] = {
     (relType match {
       case Some(typeName) => realNode.getRelationships(getDirection(node), DynamicRelationshipType.withName(typeName))
       case None => realNode.getRelationships(getDirection(node))
     }).asScala.map(new SingleGraphRelationship(_)).toSeq
   }
+
   protected def getDirection(node: PatternNode): Direction = {
     dir match {
       case Direction.OUTGOING => if (node == leftNode) Direction.OUTGOING else Direction.INCOMING
@@ -59,13 +68,14 @@ class VariableLengthPatternRelationship(
                                          maxHops: Int,
                                          relType: Option[String],
                                          dir: Direction,
-                                         optional:Boolean)
+                                         optional: Boolean)
   extends PatternRelationship(pathName, start, end, relType, dir, optional) {
 
   override def getGraphRelationships(node: PatternNode, realNode: Node): Seq[GraphRelationship] = {
     val baseTraversalDescription: TraversalDescription = Traversal.description()
       .evaluator(Evaluators.includingDepths(minHops, maxHops))
       .uniqueness(Uniqueness.RELATIONSHIP_PATH)
+
 
     val traversalDescription = relType match {
       case Some(typeName) => baseTraversalDescription.expand(Traversal.expanderForTypes(DynamicRelationshipType.withName(typeName), getDirection(node)))

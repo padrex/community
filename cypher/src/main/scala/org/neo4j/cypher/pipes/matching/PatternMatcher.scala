@@ -20,6 +20,7 @@
 package org.neo4j.cypher.pipes.matching
 
 import org.neo4j.graphdb.Node
+import collection.Seq
 
 class PatternMatcher(startPoint: PatternNode, bindings: Map[String, MatchingPair]) extends Traversable[Map[String, Any]] {
 
@@ -40,7 +41,7 @@ class PatternMatcher(startPoint: PatternNode, bindings: Map[String, MatchingPair
       case None =>
     }
 
-    val notYetVisited = getPatternRelationshipsNotYetVisited(pNode, history)
+    val notYetVisited = pNode.getPRels(history).toList
 
     if (notYetVisited.isEmpty) {
       traverseNextNodeOrYield(remaining, history ++ Seq(current), yielder)
@@ -50,7 +51,9 @@ class PatternMatcher(startPoint: PatternNode, bindings: Map[String, MatchingPair
       in future, so that remaining pattern relationships can be traversed.
       */
 
-      traverseRelationship(current, notYetVisited.head, history, remaining ++ Seq(current), yielder)
+      val mostMarkedRel = getMostMarkedRelationship(notYetVisited)
+
+      traverseRelationship(current, mostMarkedRel, history, remaining ++ Seq(current), yielder)
     }
   }
 
@@ -77,7 +80,7 @@ class PatternMatcher(startPoint: PatternNode, bindings: Map[String, MatchingPair
       traverseNode(MatchingPair(nextPNode, nextNode), newHistory, remaining, yielder)
     }).foldLeft(false)(_ || _)
 
-    if(yielded) {
+    if (yielded) {
       return true
     }
 
@@ -85,7 +88,19 @@ class PatternMatcher(startPoint: PatternNode, bindings: Map[String, MatchingPair
       return traverseNextNodeOrYield(remaining, history ++ Seq(currentNode, MatchingPair(currentRel, null)), yielder)
     }
 
+    markPathToBoundNode(currentNode, currentRel)
     false
+  }
+
+  private def markPathToBoundNode(matchingNode:MatchingPair, rel:PatternRelationship) {
+    val node = matchingNode.patternElement.asInstanceOf[PatternNode]
+    val startNodes = bindings.values.filter(_.patternElement.isInstanceOf[PatternNode]).map(_.patternElement.asInstanceOf[PatternNode]).toSeq
+    val paths = shortestPaths(node, startNodes)
+
+    //Mark all nodes and relationships in all paths leading to a start node
+
+    paths.foreach( _.foreach( _.mark(10) ))
+    rel.mark(10)
   }
 
   private def traverseNextNodeOrYield[U](remaining: Seq[MatchingPair], history: Seq[MatchingPair], yielder: Map[String, Any] => U): Boolean = {
@@ -122,7 +137,7 @@ class PatternMatcher(startPoint: PatternNode, bindings: Map[String, MatchingPair
     yielder(resultMap)
   }
 
-  private def getPatternRelationshipsNotYetVisited[U](patternNode: PatternNode, history: scala.Seq[MatchingPair]): List[PatternRelationship] = patternNode.getPRels(history).toList
+  def getMostMarkedRelationship(notYetVisited: List[PatternRelationship]) = notYetVisited.reduceLeft((a, b) => if (a.compare(b) > 0) a else b)
 
   val isDebugging = false
 

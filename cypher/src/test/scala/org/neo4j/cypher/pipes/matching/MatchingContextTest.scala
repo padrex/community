@@ -24,13 +24,14 @@ import org.scalatest.Assertions
 import org.neo4j.cypher.{SymbolTable, GraphDatabaseTestBase}
 import org.neo4j.cypher.commands.{NodeIdentifier, VarLengthRelatedTo, RelatedTo, Pattern}
 import org.neo4j.graphdb.{Node, Direction}
-import org.junit.{Before, Ignore, Test}
+import org.junit.{Before, Test}
 
 class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   var a: Node = null
   var b: Node = null
   var c: Node = null
   var d: Node = null
+  var e: Node = null
 
   @Before
   def init() {
@@ -38,6 +39,7 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
     b = createNode("b")
     c = createNode("c")
     d = createNode("d")
+    e = createNode("e")
   }
 
   @Test def singleHopSingleMatch() {
@@ -306,9 +308,24 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
       Map("pA" -> a, "pR1" -> r2, "pB" -> c, "pC" -> b, "pR2" -> r1))
   }
 
-  @Test
-  @Ignore def zeroLengthVariableLengthPatternNotAllowed() {
-    // TBD?
+  @Test def optimizationTest() {
+    relate(a, b, "rel", "r1")
+    relate(b, c, "rel", "r2")
+    relate(c, d, "rel", "r3")
+    relate(d, a, "rel", "r4")
+    relate(d, e, "knows", "r5")
+
+    val pattern = Seq(
+      RelatedTo("pA", "pB", "pR1", "rel", Direction.OUTGOING),
+      RelatedTo("pA", "pC", "pR2", "knows", Direction.OUTGOING)
+    )
+
+    val context = new MatchingContext(pattern, bind("pA"))
+
+    context.getMatches(Map("pA" -> a)).toList
+    context.getMatches(Map("pA" -> b)).toList
+    context.getMatches(Map("pA" -> c)).toList
+    context.getMatches(Map("pA" -> d)).toList
   }
 
   def bind(boundSymbols: String*): SymbolTable = {

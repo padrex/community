@@ -19,4 +19,19 @@
  */
 package org.neo4j.cypher.pipes.matching
 
-abstract class PatternElement(val key: String) extends MarkedRelationship
+trait MarkedRelationship extends Ordered[MarkedRelationship] {
+  var scent = 0
+
+  def evaporate() {
+    scent = scent match {
+      case 0 => 0
+      case x => scent - 1
+    }
+  }
+
+  def mark(value:Int) {
+    scent = scent + value
+  }
+
+  def compare(that: MarkedRelationship): Int = this.scent.compare(that.scent)
+}
