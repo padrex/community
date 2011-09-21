@@ -22,10 +22,12 @@ package org.neo4j.cypher.pipes.matching
 import org.neo4j.graphdb.Node
 import collection.Seq
 
-class PatternMatcher(startPoint: PatternNode, bindings: Map[String, MatchingPair]) extends Traversable[Map[String, Any]] {
+class PatternMatcher(bindings: Map[String, MatchingPair], patternGraph:Map[String, PatternElement]) extends Traversable[Map[String, Any]] {
 
   def foreach[U](f: (Map[String, Any]) => U) {
-    traverseNode(MatchingPair(startPoint, startPoint.pinnedEntity.get), Seq(), bindings.values.toSeq, f)
+    val startPoint = bindings.reduceLeft((a, b) => if (a._2.patternElement.compare(b._2.patternElement) > 0) a else b)
+
+    traverseNode(startPoint._2, Seq(), bindings.values.toSeq, f)
   }
 
   private def traverseNode[U](current: MatchingPair,
@@ -137,7 +139,8 @@ class PatternMatcher(startPoint: PatternNode, bindings: Map[String, MatchingPair
     yielder(resultMap)
   }
 
-  def getMostMarkedRelationship(notYetVisited: List[PatternRelationship]) = notYetVisited.reduceLeft((a, b) => if (a.compare(b) > 0) a else b)
+  def getMostMarkedRelationship(notYetVisited: Seq[PatternRelationship]) = notYetVisited.reduceLeft((a, b) => if (a.compare(b) > 0) a else b)
+  def getMostMarkedNode(notYetVisited: Seq[PatternNode]) = notYetVisited.reduceLeft((a, b) => if (a.compare(b) > 0) a else b)
 
   val isDebugging = false
 

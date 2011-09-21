@@ -22,6 +22,7 @@ package org.neo4j.cypher.pipes.matching
 import org.neo4j.cypher.commands.{VarLengthRelatedTo, RelatedTo, Pattern}
 import org.neo4j.cypher.{SyntaxException, SymbolTable}
 import org.neo4j.graphdb.{Relationship, Node}
+import collection.immutable.Map
 
 class MatchingContext(patterns: Seq[Pattern], boundIdentifiers: SymbolTable) {
   type PatternGraph = Map[String, PatternElement]
@@ -37,7 +38,7 @@ class MatchingContext(patterns: Seq[Pattern], boundIdentifiers: SymbolTable) {
 
     val pinnedPatternNode = patternGraph(pinnedName).asInstanceOf[PatternNode]
 
-    val boundPairs = bindings.map(kv => {
+    val boundPairs: Map[String, MatchingPair] = bindings.map(kv => {
       val patternElement = patternGraph(kv._1)
       val pair = kv._2 match {
         case node: Node => MatchingPair(patternElement, node)
@@ -49,7 +50,7 @@ class MatchingContext(patterns: Seq[Pattern], boundIdentifiers: SymbolTable) {
 
     pinnedPatternNode.pin(pinnedNode.asInstanceOf[Node])
 
-    new PatternMatcher(pinnedPatternNode, boundPairs).map(matchedGraph => {
+    new PatternMatcher(boundPairs, patternGraph).map(matchedGraph => {
       matchedGraph ++ createNullValuesForOptionalElements(matchedGraph)
     })
   }
@@ -108,12 +109,10 @@ class MatchingContext(patterns: Seq[Pattern], boundIdentifiers: SymbolTable) {
       }
     })
 
-    val notVisited: Seq[PatternElement] = patternElements.toList -- visited.toList
+    val notVisited: Seq[PatternElement] = patternElements.filterNot(visited contains)
 
     if (notVisited.nonEmpty) {
       throw new SyntaxException("All parts of the pattern must either directly or indirectly be connected to at least one bound entity. These identifiers were found to be disconnected: " + notVisited.map(_.key).mkString("", ", ", ""))
     }
-
   }
-
 }
