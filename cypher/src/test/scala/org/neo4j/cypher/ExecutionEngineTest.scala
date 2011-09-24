@@ -32,7 +32,7 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
 
   @Test def shouldGetReferenceNode() {
     val query = Query.
-      start(NodeById("node", 0)).
+      start(NodeById("node", Literal(0))).
       returns(ValueReturnItem(EntityValue("node")))
 
     val result = execute(query)
@@ -145,7 +145,6 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     assertEquals(List(a), result.columnAs[Node]("a").toList)
   }
 
-  @Ignore("Maybe later")
   @Test def shouldOutputTheCartesianProductOfTwoNodes() {
     val n1: Node = createNode()
     val n2: Node = createNode()
@@ -248,7 +247,7 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     indexNode(n, idxName, key, value)
 
     val query = Query.
-      start(NodeByIndex("n", idxName, key, value)).
+      start(NodeByIndex("n", idxName, Literal(key), Literal(value))).
       returns(ValueReturnItem(EntityValue("n")))
 
     val result = execute(query)
@@ -264,10 +263,25 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     indexNode(n, idxName, key, value)
 
     val query = Query.
-      start(NodeByIndexQuery("n", idxName, key + ":" + value)).
+      start(NodeByIndexQuery("n", idxName, Literal(key + ":" + value))).
       returns(ValueReturnItem(EntityValue("n")))
 
     val result = execute(query)
+
+    assertEquals(List(Map("n" -> n)), result.toList)
+  }
+
+  @Test def shouldFindNodesByIndexParameters() {
+    val n = createNode()
+    val idxName = "idxName"
+    val key = "key"
+    indexNode(n, idxName, key, "Andres")
+
+    val query = Query.
+      start(NodeByIndex("n", idxName, Literal(key), ParameterValue("value"))).
+      returns(ValueReturnItem(EntityValue("n")))
+
+    val result = execute(query, "value" -> "Andres")
 
     assertEquals(List(Map("n" -> n)), result.toList)
   }
@@ -280,7 +294,7 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     indexNode(n, idxName, key, value)
 
     val query = Query.
-      start(NodeByIndexQuery("n", idxName, key + ":andr*")).
+      start(NodeByIndexQuery("n", idxName, Literal(key + ":andr*"))).
       returns(ValueReturnItem(EntityValue("n")))
 
     val result = execute(query)
@@ -333,6 +347,15 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
 
     val result = execute(query)
     assertEquals(List(Map("node.name" -> null)), result.toList)
+  }
+
+  @Test def testOnlyIfPropertyExists() {
+    createNode(Map("prop"->"A"))
+    createNode()
+
+    val result = parseAndExecute("start a=(1,2) where a.prop? = 'A' return a")
+
+    assert( 2 === result.toSeq.length )
   }
 
   @Test def shouldHandleComparisonBetweenNodeProperties() {
@@ -497,7 +520,7 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     val query = Query.
       start(NodeById("n", 1)).
       matches(RelatedTo("n", "x", "r", None, Direction.OUTGOING, false)).
-      where(Equals(RelationshipTypeValue("r"), Literal("KNOWS"))).
+      where(Equals(RelationshipTypeValue(EntityValue("r")), Literal("KNOWS"))).
       returns(ValueReturnItem(EntityValue("x")))
 
     val result = execute(query)
@@ -513,11 +536,11 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     val query = Query.
       start(NodeById("n", 1)).
       matches(RelatedTo("n", "x", "r", None, Direction.OUTGOING, false)).
-      returns(ValueReturnItem(RelationshipTypeValue("r")))
+      returns(ValueReturnItem(RelationshipTypeValue(EntityValue("r"))))
 
     val result = execute(query)
 
-    assertEquals(List("KNOWS", "HATES"), result.columnAs[String]("r.TYPE").toList)
+    assertEquals(List("KNOWS", "HATES"), result.columnAs[String]("TYPE(r)").toList)
   }
 
   @Test def shouldAggregateOnProperties() {
@@ -578,7 +601,7 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     val query = Query.
       start(NodeById("n", 1)).
       matches(RelatedTo("n", "x", "r", None, Direction.OUTGOING, false)).
-      where(Or(Equals(RelationshipTypeValue("r"), Literal("KNOWS")), Equals(RelationshipTypeValue("r"), Literal("HATES")))).
+      where(Or(Equals(RelationshipTypeValue(EntityValue("r")), Literal("KNOWS")), Equals(RelationshipTypeValue(EntityValue("r")), Literal("HATES")))).
       returns(ValueReturnItem(EntityValue("x")))
 
     val result = execute(query)
@@ -623,7 +646,7 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     relate("A" -> "KNOWS" -> "B")
     relate("A" -> "HATES" -> "C")
 
-    val result = parseAndExecute("start n=(1) match (n)-[r]->(x) where r.TYPE='KNOWS' or r.TYPE='HATES' return x")
+    val result = parseAndExecute("start n=(1) match (n)-[r]->(x) where type(r)='KNOWS' or type(r) = 'HATES' return x")
 
     assertEquals(nodes.slice(1, 3), result.columnAs[Node]("x").toList)
   }
@@ -632,16 +655,26 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     createNodes("A", "B")
     relate("A" -> "KNOWS" -> "B")
 
-    val result = parseAndExecute("start n=(1) match p = n-->x where p.LENGTH=10 return x")
+    val result = parseAndExecute("start n=(1) match p = n-->x where length(p) = 10 return x")
 
     assertTrue("Result set should be empty, but it wasn't", result.isEmpty)
+  }
+
+  @Ignore
+  @Test def statingAPathTwiceShouldNotBeAProblem() {
+    createNodes("A", "B")
+    relate("A" -> "KNOWS" -> "B")
+
+    val result = parseAndExecute("start n=(1) match x<--n, p = n-->x return p")
+
+    assertEquals(1, result.toSeq.length)
   }
 
   @Test def shouldPassThePathLengthTest() {
     createNodes("A", "B")
     relate("A" -> "KNOWS" -> "B")
 
-    val result = parseAndExecute("start n=(1) match p = n-->x where p.LENGTH=3 return x")
+    val result = parseAndExecute("start n=(1) match p = n-->x where length(p)=1 return x")
 
     assertTrue("Result set should not be empty, but it was", !result.isEmpty)
   }
@@ -650,9 +683,9 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     createNodes("A", "B")
     relate("A" -> "KNOWS" -> "B")
 
-    val result = parseAndExecute("start n=(1) match p = n-->x return p.LENGTH")
+    val result = parseAndExecute("start n=(1) match p = n-->x return length(p)")
 
-    assertEquals(List(3), result.columnAs[Int]("p.LENGTH").toList)
+    assertEquals(List(1), result.columnAs[Int]("LENGTH(p)").toList)
   }
 
   @Test def shouldBeAbleToFilterOnPathNodes() {
@@ -666,8 +699,8 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     relate(c, d, "rel")
 
     val query = Query.start(NodeById("pA", a.getId), NodeById("pB", d.getId)).
-      namedPaths(NamedPath("p", VarLengthRelatedTo("x", "pA", "pB", 1, 5, "rel", Direction.OUTGOING))).
-      where(AllInSeq(PathNodesValue("p"), "i", Equals(PropertyValue("i", "foo"), Literal("bar")))).
+      namedPaths(NamedPath("p", VarLengthRelatedTo("x", "pA", "pB", Some(1), Some(5), "rel", Direction.OUTGOING))).
+      where(AllInSeq(PathNodesValue(EntityValue("p")), "i", Equals(PropertyValue("i", "foo"), Literal("bar")))).
       returns(ValueReturnItem(EntityValue("pB")))
 
     val result = execute(query)
@@ -675,17 +708,150 @@ class ExecutionEngineTest extends ExecutionEngineHelper {
     assertEquals(List(d), result.columnAs[Node]("pB").toList)
   }
 
+  @Test def shouldReturnRelationships() {
+    val a = createNode(Map("foo" -> "bar"))
+    val b = createNode(Map("foo" -> "bar"))
+    val c = createNode(Map("foo" -> "bar"))
+
+    val r1 = relate(a, b, "rel")
+    val r2 = relate(b, c, "rel")
+
+    val query = Query.start(NodeById("pA", a.getId)).
+      namedPaths(NamedPath("p", VarLengthRelatedTo("x", "pA", "pB", Some(2), Some(2), "rel", Direction.OUTGOING))).
+      returns(ValueReturnItem(PathRelationshipsValue(EntityValue("p"))))
+
+    val result = execute(query)
+
+    assertEquals(List(r1, r2), result.columnAs[Node]("RELATIONSHIPS(p)").toList.head)
+  }
+
   @Test def shouldReturnAVarLengthPath() {
     createNodes("A", "B", "C")
     val r1 = relate("A" -> "KNOWS" -> "B")
     val r2 = relate("B" -> "KNOWS" -> "C")
 
-    val result = parseAndExecute("start n=(1) match p=n-[:KNOWS^1..2]->x return p")
+    val result = parseAndExecute("start n=(1) match p=n-[:KNOWS*1..2]->x return p")
 
     assertEquals(List(
       PathImpl(node("A"), r1, node("B")),
       PathImpl(node("A"), r1, node("B"), r2, node("C"))
     ), result.columnAs[Path]("p").toList)
+  }
+
+  @Test def shouldReturnAVarLengthPathWithoutMinimalLength() {
+    createNodes("A", "B", "C")
+    val r1 = relate("A" -> "KNOWS" -> "B")
+    val r2 = relate("B" -> "KNOWS" -> "C")
+
+    val result = parseAndExecute("start n=(1) match p=n-[:KNOWS*..2]->x return p")
+
+    assertEquals(List(
+      PathImpl(node("A"), r1, node("B")),
+      PathImpl(node("A"), r1, node("B"), r2, node("C"))
+    ), result.columnAs[Path]("p").toList)
+  }
+
+  @Test def shouldReturnAVarLengthPathWithUnboundMax() {
+    createNodes("A", "B", "C")
+    val r1 = relate("A" -> "KNOWS" -> "B")
+    val r2 = relate("B" -> "KNOWS" -> "C")
+
+    val result = parseAndExecute("start n=(1) match p=n-[:KNOWS*..]->x return p")
+
+    assertEquals(List(
+      PathImpl(node("A"), r1, node("B")),
+      PathImpl(node("A"), r1, node("B"), r2, node("C"))
+    ), result.columnAs[Path]("p").toList)
+  }
+
+
+  @Test def shouldHandleBoundNodesNotPartOfThePattern() {
+    createNodes("A", "B", "C")
+    relate("A" -> "KNOWS" -> "B")
+
+    val result = parseAndExecute("start a=(1), c = (3) match a-->b return a,b,c").toList
+
+    assert(List(Map("a" -> node("A"), "b" -> node("B"), "c" -> node("C"))) === result)
+  }
+
+  @Test def shouldReturnShortestPath() {
+    createNodes("A", "B")
+    val r1 = relate("A" -> "KNOWS" -> "B")
+
+    val query = Query.
+      start(NodeById("a", 1), NodeById("b", 2)).
+      namedPaths(NamedPath("p", ShortestPath("  UNNAMED1", "a", "b", None, Direction.BOTH, Some(15), false))).
+      returns(ValueReturnItem(EntityValue("p")))
+
+    val result = execute(query).toList.head("p").asInstanceOf[Path]
+
+    val number_of_relationships_in_path = result.length()
+    assert(number_of_relationships_in_path === 1)
+    assert(result.startNode() === node("A"))
+    assert(result.endNode() === node("B"))
+    assert(result.lastRelationship() === r1)
+  }
+
+  @Test def shouldBeAbleToTakeParamsInDifferentTypes() {
+    createNodes("A", "B", "C", "D", "E")
+
+    val query = Query.
+      start(
+      NodeById("pA", ParameterValue("a")),
+      NodeById("pB", ParameterValue("b")),
+      NodeById("pC", ParameterValue("c")),
+      NodeById("pD", ParameterValue("d")),
+      NodeById("pE", ParameterValue("e"))).
+      returns(ValueReturnItem(EntityValue("pA")), ValueReturnItem(EntityValue("pB")), ValueReturnItem(EntityValue("pC")), ValueReturnItem(EntityValue("pD")), ValueReturnItem(EntityValue("pE")))
+
+    val result = execute(query,
+      "a" -> Seq[Long](1),
+      "b" -> 2,
+      "c" -> Seq(3L).asJava,
+      "d" -> Seq(4).asJava,
+      "e" -> List(5)
+    )
+
+    assertEquals(1, result.toList.size)
+  }
+
+  @Test(expected = classOf[ParameterNotFoundException]) def parameterTypeErrorShouldBeNicelyExplained() {
+    createNodes("A")
+
+    val query = Query.
+      start(NodeById("pA", ParameterValue("a"))).
+      returns(ValueReturnItem(EntityValue("pA")))
+
+    execute(query, "a" -> "Andres").toList
+  }
+
+  @Test def shouldBeAbleToTakeParamsFromParsedStuff() {
+    createNodes("A")
+
+    val query = new CypherParser().parse("start pA = ({a}) return pA")
+    val result = execute(query, "a" -> Seq[Long](1))
+
+    assertEquals(List(Map("pA" -> node("A"))), result.toList)
+  }
+
+  @Test def shouldBeAbleToTakeParamsForEqualityComparisons() {
+    createNode(Map("name" -> "Andres"))
+
+    val query = Query.
+      start(NodeById("a", 1)).
+      where(Equals(PropertyValue("a", "name"), ParameterValue("name")))
+      .returns(ValueReturnItem(EntityValue("a")))
+
+    assert(0 === execute(query, "name" -> "Tobias").toList.size)
+    assert(1 === execute(query, "name" -> "Andres").toList.size)
+  }
+
+  @Test(expected = classOf[ParameterNotFoundException]) def shouldComplainWhenMissingParams() {
+    val query = Query.
+      start(NodeById("pA", ParameterValue("a"))).
+      returns(ValueReturnItem(EntityValue("pA")))
+
+    execute(query).toList
   }
 
   @Test def shouldThrowNiceErrorMessageWhenPropertyIsMissing() {

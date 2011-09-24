@@ -48,6 +48,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientRequest.Builder;
 import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.UniformInterfaceException;
 
 /**
  * Generate asciidoc-formatted documentation from HTTP requests and responses.
@@ -186,6 +187,12 @@ public class RESTDocsGenerator extends AsciiDocGenerator
         return retrieveResponse( title, description, request.getURI()
                 .toString(), expectedResponseStatus, expectedMediaType, expectedHeaderFields, request );
     }
+    
+    @Override
+    public RESTDocsGenerator description( String description )
+    {
+        return (RESTDocsGenerator) super.description( description );
+    }
 
     /**
      * Send a GET request.
@@ -295,14 +302,21 @@ public class RESTDocsGenerator extends AsciiDocGenerator
         }
         Client client = new Client();
         ClientResponse response = client.handle( request );
-        assertEquals( responseCode, response.getStatus() );
+        if ( response.hasEntity() && response.getStatus() != 204 )
+        {
+            data.setEntity( response.getEntity( String.class ) );
+        }
+        try {
+        } catch (UniformInterfaceException uie) {
+            //ok
+        }
         if ( response.getType() != null )
         {
-            assertEquals( type, response.getType() );
+            assertEquals( "wrong response type: "+ data.entity, type, response.getType() );
         }
         for ( String headerField : headerFields )
         {
-            assertNotNull( response.getHeaders()
+            assertNotNull( "wrong headers: "+ data.entity, response.getHeaders()
                     .get( headerField ) );
         }
         data.setTitle( title );
@@ -310,10 +324,7 @@ public class RESTDocsGenerator extends AsciiDocGenerator
         data.setMethod( request.getMethod() );
         data.setUri( uri );
         data.setStatus( responseCode );
-        if ( response.hasEntity() && response.getStatus() != 204 )
-        {
-            data.setEntity( response.getEntity( String.class ) );
-        }
+        assertEquals( "Wrong response status. response: " + data.entity, responseCode, response.getStatus() );
         getResponseHeaders( data, response.getHeaders(), headerFields );
         document( data );
         return new ResponseEntity( response, data.entity );
@@ -471,7 +482,7 @@ public class RESTDocsGenerator extends AsciiDocGenerator
                 line( fw, "" );
             }
             if( graph != null) {
-                fw.append( AsciidocHelper.createGraphViz( "Final Graph:", graph, title));
+                fw.append( AsciidocHelper.createGraphViz( "Final Graph", graph, title));
                 line(fw, "" );
             }
             line( fw, "_Example request_" );

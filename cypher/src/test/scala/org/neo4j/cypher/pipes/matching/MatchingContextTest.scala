@@ -21,16 +21,26 @@
 package org.neo4j.cypher.pipes.matching
 
 import org.scalatest.Assertions
-import org.neo4j.graphdb.Direction
-import org.junit.{Ignore, Test}
 import org.neo4j.cypher.{SymbolTable, GraphDatabaseTestBase}
 import org.neo4j.cypher.commands.{NodeIdentifier, VarLengthRelatedTo, RelatedTo, Pattern}
+import org.neo4j.graphdb.{Node, Direction}
+import org.junit.{Before, Ignore, Test}
 
 class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
+  var a: Node = null
+  var b: Node = null
+  var c: Node = null
+  var d: Node = null
+
+  @Before
+  def init() {
+    a = createNode("a")
+    b = createNode("b")
+    c = createNode("c")
+    d = createNode("d")
+  }
 
   @Test def singleHopSingleMatch() {
-    val a = createNode()
-    val b = createNode()
     val r = relate(a, b, "rel")
 
     val patterns: Seq[Pattern] = Seq(RelatedTo("a", "b", "r", "rel", Direction.OUTGOING, false))
@@ -40,9 +50,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def singleHopDoubleMatch() {
-    val a = createNode("a")
-    val b = createNode("b")
-    val c = createNode("c")
     val r1 = relate(a, b, "rel", "r1")
     val r2 = relate(a, c, "rel", "r2")
 
@@ -56,9 +63,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def doubleHopDoubleMatch() {
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
     val r1 = relate(a, b, "rel")
     val r2 = relate(a, c, "rel")
 
@@ -74,11 +78,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def theDreadedDiamondTest() {
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
-    val d = createNode()
-
     val r1 = relate(a, b, "x")
     val r2 = relate(a, c, "x")
     val r3 = relate(b, d, "x")
@@ -100,9 +99,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
 
 
   @Test def pinnedNodeMakesNoMatchesInDisjunctGraph() {
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
     relate(a, b, "rel")
 
     val patterns: Seq[Pattern] = Seq(RelatedTo("a", "c", "r", "rel", Direction.OUTGOING, false))
@@ -112,11 +108,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def pinnedNodeMakesNoMatches() {
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
-    val d = createNode()
-
     val r1 = relate(a, b, "x")
     val r2 = relate(a, c, "x")
     val r3 = relate(b, d, "x")
@@ -135,9 +126,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def directionConstraintFiltersMatches() {
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
     val r1 = relate(a, b, "rel")
     val r2 = relate(c, a, "rel")
 
@@ -149,8 +137,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def typeConstraintFiltersMatches() {
-    val a = createNode()
-    val b = createNode()
     val r1 = relate(a, b, "t1")
     relate(a, b, "t2")
 
@@ -161,8 +147,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def optionalRelationship() {
-    val a = createNode()
-
     val patterns: Seq[Pattern] = Seq(RelatedTo("a", "b", "r", Some("t1"), Direction.OUTGOING, optional = true))
     val matchingContext = new MatchingContext(patterns, bind("a"))
 
@@ -170,8 +154,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def optionalRelatedWithMatch() {
-    val a = createNode()
-    val b = createNode()
     val r1 = relate(a, b, "t1")
     relate(a, b, "t2")
 
@@ -182,9 +164,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def optionalRelatedWithTwoBoundNodes() {
-    val a = createNode()
-    val b = createNode()
-
     val patterns: Seq[Pattern] = Seq(RelatedTo("a", "b", "r", Some("t1"), Direction.OUTGOING, optional = true))
     val matchingContext = new MatchingContext(patterns, bind("a", "b"))
 
@@ -192,11 +171,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def moreComplexOptionalCase() {
-    val a = createNode("a")
-    val b = createNode("b")
-    val c = createNode("c")
-    val d = createNode("d")
-
     val r1 = relate(a, b, "t1", "r1")
     val r3 = relate(c, d, "t1", "r3")
 
@@ -211,113 +185,83 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
   }
 
   @Test def optionalVariableLengthPath() {
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
     relate(a, b, "rel")
     relate(b, c, "rel")
 
-    val patterns: Seq[Pattern] = Seq(VarLengthRelatedTo("p", "a", "c", 1, 2, "rel", Direction.OUTGOING, true))
+    val patterns: Seq[Pattern] = Seq(VarLengthRelatedTo("p", "a", "c", Some(1), Some(2), "rel", Direction.OUTGOING, true))
     val matchingContext = new MatchingContext(patterns, bind("a"))
 
     assertMatches(matchingContext.getMatches(Map("a" -> a)), 2, Map("a" -> a, "c" -> b), Map("a" -> a, "c" -> c))
   }
 
   @Test def optionalVariableLengthPathWithPinnedEndNodes() {
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
-    val d = createNode()
-    relate(a,b,"rel")
-    relate(b,c,"rel")
-    relate(a,c,"rel")
+    relate(a, b, "rel")
+    relate(b, c, "rel")
+    relate(a, c, "rel")
 
-    val patterns: Seq[Pattern] = Seq(VarLengthRelatedTo("p", "pA", "pB", 1, 2, "rel", Direction.OUTGOING, true))
+    val patterns: Seq[Pattern] = Seq(VarLengthRelatedTo("p", "pA", "pB", Some(1), Some(2), "rel", Direction.OUTGOING, true))
     val matchingContext = new MatchingContext(patterns, bind("pA", "pB"))
 
-    assertMatches(matchingContext.getMatches(Map("pA" -> a, "pB"->d)), 1)
-    assertMatches(matchingContext.getMatches(Map("pA" -> a, "pB"->c)), 2)
+    assertMatches(matchingContext.getMatches(Map("pA" -> a, "pB" -> d)), 1)
+    assertMatches(matchingContext.getMatches(Map("pA" -> a, "pB" -> c)), 2)
   }
 
 
   @Test def variableLengthPath() {
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
     relate(a, b, "rel")
     relate(b, c, "rel")
 
-    val patterns: Seq[Pattern] = Seq(VarLengthRelatedTo("p", "a", "c", 1, 2, "rel", Direction.OUTGOING))
+    val patterns: Seq[Pattern] = Seq(VarLengthRelatedTo("p", "a", "c", Some(1), Some(2), "rel", Direction.OUTGOING))
     val matchingContext = new MatchingContext(patterns, bind("a"))
 
     assertMatches(matchingContext.getMatches(Map("a" -> a)), 2, Map("a" -> a, "c" -> b), Map("a" -> a, "c" -> c))
   }
 
   @Test def variableLengthPathWithOneHopBefore() {
-
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
-    val d = createNode()
     val r1 = relate(a, b, "rel")
     relate(b, c, "rel")
     relate(c, d, "rel")
 
     val patterns: Seq[Pattern] = Seq(
       RelatedTo("a", "b", "r1", "rel", Direction.OUTGOING),
-      VarLengthRelatedTo("p", "b", "c", 1, 2, "rel", Direction.OUTGOING))
+      VarLengthRelatedTo("p", "b", "c", Some(1), Some(2), "rel", Direction.OUTGOING))
     val matchingContext = new MatchingContext(patterns, bind("a"))
 
     assertMatches(matchingContext.getMatches(Map("a" -> a)), 2, Map("a" -> a, "r1" -> r1, "b" -> b, "c" -> c), Map("a" -> a, "r1" -> r1, "b" -> b, "c" -> d))
   }
 
   @Test def variableLengthPathWithOneHopBeforeWithDifferentType() {
-
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
-    val d = createNode()
     val r1 = relate(a, b, "t1")
     relate(b, c, "t1")
     relate(c, d, "t2")
 
     val patterns: Seq[Pattern] = Seq(
       RelatedTo("a", "b", "r1", "t1", Direction.OUTGOING),
-      VarLengthRelatedTo("p", "b", "c", 1, 2, "t1", Direction.OUTGOING))
+      VarLengthRelatedTo("p", "b", "c", Some(1), Some(2), "t1", Direction.OUTGOING))
     val matchingContext = new MatchingContext(patterns, bind("a"))
 
     assertMatches(matchingContext.getMatches(Map("a" -> a)), 1, Map("a" -> a, "r1" -> r1, "b" -> b, "c" -> c))
   }
 
   @Test def variableLengthPathWithBranch() {
-
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
-    val d = createNode()
     relate(a, b, "t1")
     relate(b, c, "t1")
     relate(b, d, "t1")
 
     val patterns: Seq[Pattern] = Seq(
-      VarLengthRelatedTo("p", "a", "x", 1, 2, "t1", Direction.OUTGOING))
+      VarLengthRelatedTo("p", "a", "x", Some(1), Some(2), "t1", Direction.OUTGOING))
     val matchingContext = new MatchingContext(patterns, bind("a"))
 
     assertMatches(matchingContext.getMatches(Map("a" -> a)), 3, Map("a" -> a, "x" -> b), Map("a" -> a, "x" -> c), Map("a" -> a, "x" -> d))
   }
 
   @Test def variableLengthPathWithPinnedEndNode() {
-
-    val a = createNode()
-    val b = createNode()
-    val c = createNode()
-    val d = createNode()
     relate(a, b, "t1")
     relate(b, c, "t1")
     relate(b, d, "t1")
 
     val patterns: Seq[Pattern] = Seq(
-      VarLengthRelatedTo("p", "a", "x", 1, 2, "t1", Direction.OUTGOING))
+      VarLengthRelatedTo("p", "a", "x", Some(1), Some(2), "t1", Direction.OUTGOING))
     val matchingContext = new MatchingContext(patterns, bind("a", "x"))
 
     assertMatches(matchingContext.getMatches(Map("a" -> a, "x" -> d)), 1, Map("a" -> a, "x" -> d))
@@ -345,11 +289,6 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
      */
 
 
-
-    val a = createNode("a")
-    val b = createNode("b")
-    val c = createNode("c")
-    val d = createNode("d")
     val r1 = relate(a, b, "rel", "r1")
     val r2 = relate(a, c, "rel", "r2")
     relate(b, d, "rel", "r3")
@@ -359,7 +298,7 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
     val patterns: Seq[Pattern] = Seq(
       RelatedTo("pA", "pB", "pR1", "rel", Direction.OUTGOING),
       RelatedTo("pA", "pC", "pR2", "rel", Direction.OUTGOING),
-      VarLengthRelatedTo("p", "pB", "pC", 1, 3, "rel", Direction.BOTH))
+      VarLengthRelatedTo("p", "pB", "pC", Some(1), Some(3), "rel", Direction.BOTH))
     val matchingContext = new MatchingContext(patterns, bind("pA"))
 
     assertMatches(matchingContext.getMatches(Map("pA" -> a)), 4,
@@ -397,6 +336,4 @@ class MatchingContextTest extends GraphDatabaseTestBase with Assertions {
 
     true
   }
-
-
 }

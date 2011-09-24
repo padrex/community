@@ -38,3 +38,5 @@ include::management.txt[]
 
 include::examples/uniqueness-of-paths-in-traversals.txt[]
 
+include::examples/acl-structures-in-graphs.txt[]
+

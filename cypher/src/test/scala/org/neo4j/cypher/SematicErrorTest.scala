@@ -26,7 +26,8 @@ import parser.CypherParser
 
 class SematicErrorTest extends ExecutionEngineHelper {
   @Test def returnNodeThatsNotThere() {
-    expectedError("start x=(0) return bar", """Unknown identifier "bar".""")
+    expectedError("start x=(0) return bar",
+      """Unknown identifier "bar".""")
   }
 
   @Test def throwOnDisconnectedPattern() {
@@ -36,17 +37,27 @@ class SematicErrorTest extends ExecutionEngineHelper {
 
   @Test def defineNodeAndTreatItAsARelationship() {
     expectedError("start r=(0) match a-[r]->b return r",
-      "Identifier NodeIdentifier(r) already defined with different type RelationshipIdentifier(r)")
+      "Some identifiers are used as both relationships and nodes: r")
+  }
+
+  @Test def redefineSymbolInMatch() {
+    expectedError("start a=(0) match a-[r]->b-->r return r",
+      "Some identifiers are used as both relationships and nodes: r")
   }
 
   @Test def cantUseTYPEOnNodes() {
-    expectedError("start r=(0) return r.TYPE",
+    expectedError("start r=(0) return type(r)",
       "Expected r to be a RelationshipIdentifier but it was NodeIdentifier")
   }
 
   @Test def cantUseLENGTHOnNodes() {
-    expectedError("start r=(0) return r.LENGTH",
-      "Expected r to be a ArrayIdentifier but it was NodeIdentifier")
+    expectedError("start n=(0) return length(n)",
+      "Expected n to be an iterable, but it is not.")
+  }
+
+  @Test def shortestPathNeedsBothEndNodes() {
+    expectedError("start n=(0) match p=shortestPath(n-->b) return p",
+      "Shortest path needs both ends of the path to be provided. Couldn't find b")
   }
 
   def parse(txt:String):Query = new CypherParser().parse(txt)
