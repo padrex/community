@@ -238,6 +238,39 @@ public class TestShortestPath extends Neo4jAlgoTestCase
     }
     
     @Test
+    public void withPathFilters() throws Exception
+    {
+        graph.makeEdgeChain( "a,b,c,d" );
+        graph.makeEdgeChain( "a,g,h,d" );
+        Node a = graph.getNode( "a" );
+        Node d = graph.getNode( "d" );
+        Node g = graph.getNode( "g" );
+        Node h = graph.getNode( "h" );
+        a.setProperty( "include", true );
+        g.setProperty( "include", true );
+        h.setProperty( "include", true );
+        d.setProperty( "include", true );
+        Predicate<Path> allNodesInPathMustHaveInclude = new Predicate<Path>()
+        {
+            @Override
+            public boolean accept( Path path )
+            {
+                System.out.println( "path:" + Traversal.simplePathToString( path, "name" ) );
+                for ( Node node : path.nodes() )
+                {
+                    boolean include = (Boolean)node.getProperty( "include", false );
+                    System.out.println( "include " + node.getProperty( "name" ) + " " + include );
+                    if ( !include ) return false;
+                }
+                return true;
+            }
+        };
+        assertPaths( Traversal.description().expand(
+                Traversal.expanderForAllTypes().addFilter( allNodesInPathMustHaveInclude ) ).traverse( a ),
+                "a", "a,g", "a,g,h", "a,g,h,d" );
+    }
+    
+    @Test
     public void testFinderShouldNotFindAnythingBeyondLimit()
     {
         graph.makeEdgeChain( "a,b,c,d,e" );

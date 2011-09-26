@@ -39,6 +39,7 @@
 package org.neo4j.kernel;
 
 import static java.util.Arrays.asList;
+import static org.neo4j.kernel.ExtendedPath.extend;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -621,17 +622,17 @@ public abstract class StandardExpander implements Expander
         }
 
         @Override
-        Iterator<Relationship> doExpand( Path path )
+        Iterator<Relationship> doExpand( final Path path )
         {
-            final Node node = path.endNode();
             return new FilteringIterator<Relationship>(
                     expander.doExpand( path ), new Predicate<Relationship>()
                     {
                         public boolean accept( Relationship item )
                         {
+                            Path extendedPath = extend( path, item );
                             for ( Filter filter : filters )
                             {
-                                if ( filter.exclude( node, item ) )
+                                if ( filter.exclude( extendedPath ) )
                                     return false;
                             }
                             return true;
@@ -717,7 +718,7 @@ public abstract class StandardExpander implements Expander
 
     private static abstract class Filter
     {
-        abstract boolean exclude( Node start, Relationship item );
+        abstract boolean exclude( Path path );
     }
 
     private static final class NodeFilter extends Filter
@@ -736,9 +737,9 @@ public abstract class StandardExpander implements Expander
         }
 
         @Override
-        boolean exclude( Node start, Relationship item )
+        boolean exclude( Path path )
         {
-            return !predicate.accept( item.getOtherNode( start ) );
+            return !predicate.accept( path.lastRelationship().getOtherNode( path.endNode() ) );
         }
     }
 
@@ -758,12 +759,34 @@ public abstract class StandardExpander implements Expander
         }
 
         @Override
-        boolean exclude( Node start, Relationship item )
+        boolean exclude( Path path )
         {
-            return !predicate.accept( item );
+            return !predicate.accept( path.lastRelationship() );
         }
     }
 
+    private static final class PathFilter extends Filter
+    {
+        private final Predicate<? super Path> predicate;
+
+        PathFilter( Predicate<? super Path> predicate )
+        {
+            this.predicate = predicate;
+        }
+
+        @Override
+        public String toString()
+        {
+            return predicate.toString();
+        }
+
+        @Override
+        boolean exclude( Path path )
+        {
+            return !predicate.accept( path );
+        }
+    }
+    
     public final Expansion<Relationship> expand( Path path )
     {
         return new RelationshipExpansion( this, path );
@@ -828,12 +851,11 @@ public abstract class StandardExpander implements Expander
         return new FilteringExpander( this, new RelationshipFilter( filter ) );
     }
     
-    public StandardExpander addRelationsipFilter(
-            Predicate<? super Relationship> filter )
+    public StandardExpander addFilter( Predicate<? super Path> filter )
     {
-        return addRelationshipFilter(filter);
+        return new FilteringExpander( this, new PathFilter( filter ) );
     }
-
+    
     static StandardExpander wrap( RelationshipExpander expander )
     {
         return new WrappingExpander( expander );
