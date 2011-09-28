@@ -129,6 +129,7 @@ public class XaResourceManager
             throw new IOException( "Force inject start failed, xid: " + xid
                 + " not injected" );
         }
+        recoveredTxCount--;
         injectStart( xid, tx );
     }
 
