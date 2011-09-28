@@ -182,7 +182,7 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
             {
                 msgLog.logMessage( "Couldn't close neostore after startup failure" );
             }
-            throw Exceptions.launderedException( e );
+            throw Exceptions.launderedException( IOException.class, e );
         }
     }
 

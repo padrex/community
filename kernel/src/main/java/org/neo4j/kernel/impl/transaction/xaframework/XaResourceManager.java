@@ -121,16 +121,18 @@ public class XaResourceManager
         recoveredTxCount++;
     }
 
-    synchronized void forceInjectStart( Xid xid, XaTransaction tx )
+    synchronized int forceInjectStart( Xid xid, XaTransaction tx )
         throws IOException
     {
-        if ( xidMap.remove( xid ) == null )
+        XidStatus old = xidMap.remove( xid );
+        if ( old == null )
         {
             throw new IOException( "Force inject start failed, xid: " + xid
                 + " not injected" );
         }
         recoveredTxCount--;
         injectStart( xid, tx );
+        return old.getTransactionStatus().getTransaction().getIdentifier();
     }
 
     synchronized void resume( Xid xid ) throws XAException

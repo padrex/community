@@ -467,10 +467,11 @@ public class XaLogicalLog
             if ( doingRecovery )
             {   // In recovery this is OK: why?
                 // TODO log?
-                xaRm.forceInjectStart( xid, xaTx );
+                int oldId = xaRm.forceInjectStart( xid, xaTx );
+                //recoveredTxMap.remove( oldId );
+                //xidIdentMap.remove( oldId );
             }
-            else
-                throw launderedException( IOException.class, e );
+            else throw launderedException( IOException.class, e );
         }
         // force to make sure done record is there if 2PC tx and global log
         // marks tx as committed
