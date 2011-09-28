@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.transaction.xaframework;
 
+import static org.neo4j.helpers.Exceptions.launderedException;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -443,7 +445,7 @@ public class XaLogicalLog
         }
     }
 
-    private void applyStartEntry( LogEntry.Start entry) throws IOException
+    private void applyStartEntry( LogEntry.Start entry ) throws IOException
     {
         int identifier = entry.getIdentifier();
         if ( identifier >= nextIdentifier )
@@ -456,7 +458,20 @@ public class XaLogicalLog
         XaTransaction xaTx = xaTf.create( identifier );
         xaTx.setRecovered();
         recoveredTxMap.put( identifier, xaTx );
-        xaRm.injectStart( xid, xaTx );
+        try
+        {
+            xaRm.injectStart( xid, xaTx );
+        }
+        catch ( Exception e )
+        {
+            if ( doingRecovery )
+            {   // In recovery this is OK: why?
+                // TODO log?
+                xaRm.forceInjectStart( xid, xaTx );
+            }
+            else
+                throw launderedException( IOException.class, e );
+        }
         // force to make sure done record is there if 2PC tx and global log
         // marks tx as committed
         fileChannel.force( false );
