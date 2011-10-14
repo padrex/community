@@ -19,10 +19,10 @@
  */
 package org.neo4j.kernel.impl.storemigration.legacystore;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.Iterator;
 
 import org.neo4j.helpers.UTF8;
@@ -35,14 +35,14 @@ public class BufferedInputStreamNodeStoreReader implements NodeStoreReader
     public static final String FROM_VERSION = "NodeStore v0.9.9";
     public static final int RECORD_LENGTH = 9;
 
-    private final FileChannel fileChannel;
     private final long maxId;
+    private BufferedInputStream inputStream;
 
     public BufferedInputStreamNodeStoreReader( String fileName ) throws IOException
     {
-        fileChannel = new RandomAccessFile( fileName, "r" ).getChannel();
+        inputStream = new BufferedInputStream( new FileInputStream( fileName ) );
         int endHeaderSize = UTF8.encode( FROM_VERSION ).length;
-        maxId = (fileChannel.size() - endHeaderSize) / RECORD_LENGTH;
+        maxId = (new File( fileName ).length() - endHeaderSize) / RECORD_LENGTH;
     }
 
     @Override
@@ -54,7 +54,7 @@ public class BufferedInputStreamNodeStoreReader implements NodeStoreReader
     @Override
     public Iterable<NodeRecord> readNodeStore() throws IOException
     {
-        final ByteBuffer buffer = ByteBuffer.allocateDirect( RECORD_LENGTH );
+        final byte[] bytes = new byte[RECORD_LENGTH];
 
         return new Iterable<NodeRecord>()
         {
@@ -68,43 +68,38 @@ public class BufferedInputStreamNodeStoreReader implements NodeStoreReader
                     @Override
                     protected NodeRecord fetchNextOrNull()
                     {
-                        NodeRecord nodeRecord = null;
-                        while ( nodeRecord == null && id <= maxId )
+                        if ( id >= maxId )
                         {
-                            buffer.clear();
-                            try
-                            {
-                                fileChannel.read( buffer );
-                            } catch ( IOException e )
-                            {
-                                throw new RuntimeException( e );
-                            }
-                            buffer.flip();
-                            long inUseByte = buffer.get();
-
-                            boolean inUse = (inUseByte & 0x1) == Record.IN_USE.intValue();
-                            nodeRecord = new NodeRecord( id );
-                            nodeRecord.setInUse( inUse );
-                            if ( inUse )
-                            {
-                                long nextRel = LegacyStore.getUnsignedInt( buffer );
-                                long nextProp = LegacyStore.getUnsignedInt( buffer );
-
-                                long relModifier = (inUseByte & 0xEL) << 31;
-                                long propModifier = (inUseByte & 0xF0L) << 28;
-
-                                nodeRecord.setNextRel( LegacyStore.longFromIntAndMod( nextRel, relModifier ) );
-                                nodeRecord.setNextProp( LegacyStore.longFromIntAndMod( nextProp, propModifier ) );
-                            }
-                            id++;
+                            return null;
                         }
-                        return nodeRecord;
-                    }
 
-                    @Override
-                    public void remove()
-                    {
-                        throw new UnsupportedOperationException();
+                        try
+                        {
+                            long bytesRead = inputStream.read( bytes );
+                            if (bytesRead != RECORD_LENGTH)
+                            {
+                                throw new IllegalStateException( "not enough bytes: " + bytesRead );
+                            }
+                        }
+                        catch ( IOException e )
+                        {
+                            throw new RuntimeException( e );
+                        }
+
+                        byte inUseByte = bytes[0];
+                        boolean inUse = (inUseByte & 0x1) == Record.IN_USE.intValue();
+                        long nextRel = LegacyStore.readUnsignedInt( bytes, 1 );
+                        long nextProp = LegacyStore.readUnsignedInt( bytes, 5 );
+
+                        long relModifier = (inUseByte & 0xEL) << 31;
+                        long propModifier = (inUseByte & 0xF0L) << 28;
+
+                        NodeRecord nodeRecord = new NodeRecord( id );
+                        nodeRecord.setInUse( inUse );
+                        nodeRecord.setNextRel( LegacyStore.longFromIntAndMod( nextRel, relModifier ) );
+                        nodeRecord.setNextProp( LegacyStore.longFromIntAndMod( nextProp, propModifier ) );
+                        id++;
+                        return nodeRecord;
                     }
                 };
             }
@@ -114,6 +109,6 @@ public class BufferedInputStreamNodeStoreReader implements NodeStoreReader
     @Override
     public void close() throws IOException
     {
-        fileChannel.close();
+        inputStream.close();
     }
 }

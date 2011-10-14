@@ -19,30 +19,29 @@
  */
 package org.neo4j.kernel.impl.storemigration.legacystore;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.Iterator;
 
 import org.neo4j.helpers.UTF8;
-import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
-import org.neo4j.kernel.impl.nioneo.store.Record;
 
 public class StubbedNodeStoreReader implements NodeStoreReader
 {
     public static final String FROM_VERSION = "NodeStore v0.9.9";
     public static final int RECORD_LENGTH = 9;
 
-    private final FileChannel fileChannel;
     private final long maxId;
+    private BufferedInputStream inputStream;
 
     public StubbedNodeStoreReader( String fileName ) throws IOException
     {
-        fileChannel = new RandomAccessFile( fileName, "r" ).getChannel();
+        inputStream = new BufferedInputStream( new FileInputStream( fileName ) );
         int endHeaderSize = UTF8.encode( FROM_VERSION ).length;
-        maxId = (fileChannel.size() - endHeaderSize) / RECORD_LENGTH;
+        maxId = (new File( fileName ).length() - endHeaderSize) / RECORD_LENGTH;
     }
 
     public long getMaxId()
@@ -52,7 +51,12 @@ public class StubbedNodeStoreReader implements NodeStoreReader
 
     public Iterable<NodeRecord> readNodeStore() throws IOException
     {
-        final ByteBuffer buffer = ByteBuffer.allocateDirect( RECORD_LENGTH );
+        byte[] buffer = new byte[1024];
+        int chunk, total = 0;
+        while ( ( chunk = inputStream.read( buffer ) ) != -1 ) {
+            total += chunk;
+        }
+//        ByteBuffer.wrap(  )
 
         return new Iterable<NodeRecord>()
         {
@@ -63,7 +67,6 @@ public class StubbedNodeStoreReader implements NodeStoreReader
                 {
 
                     long id = 0;
-                    final NodeRecord record = fetchOne();
 
                     @Override
                     public boolean hasNext()
@@ -89,51 +92,11 @@ public class StubbedNodeStoreReader implements NodeStoreReader
                 };
             }
 
-            private NodeRecord fetchOne()
-            {
-                try
-                {
-                    fileChannel.position( RECORD_LENGTH * 10 );
-                }
-                catch ( IOException e )
-                {
-                    throw new RuntimeException( e );
-                }
-                NodeRecord nodeRecord;
-                buffer.clear();
-                try
-                {
-                    fileChannel.read( buffer );
-                }
-                catch ( IOException e )
-                {
-                    throw new RuntimeException( e );
-                }
-                buffer.flip();
-                long inUseByte = buffer.get();
-
-                boolean inUse = (inUseByte & 0x1) == Record.IN_USE.intValue();
-                nodeRecord = new NodeRecord( 0 );
-                nodeRecord.setInUse( inUse );
-                if ( inUse )
-                {
-                    long nextRel = LegacyStore.getUnsignedInt( buffer );
-                    long nextProp = LegacyStore.getUnsignedInt( buffer );
-
-                    long relModifier = (inUseByte & 0xEL) << 31;
-                    long propModifier = (inUseByte & 0xF0L) << 28;
-
-                    nodeRecord.setNextRel( LegacyStore.longFromIntAndMod( nextRel, relModifier ) );
-                    nodeRecord.setNextProp( LegacyStore.longFromIntAndMod( nextProp, propModifier ) );
-                }
-                return nodeRecord;
-            }
-
         };
     }
 
     public void close() throws IOException
     {
-        fileChannel.close();
+        inputStream.close();
     }
 }

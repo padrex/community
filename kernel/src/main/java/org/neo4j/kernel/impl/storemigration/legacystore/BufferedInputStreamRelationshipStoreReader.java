@@ -19,10 +19,10 @@
  */
 package org.neo4j.kernel.impl.storemigration.legacystore;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.Iterator;
 
 import org.neo4j.helpers.UTF8;
@@ -30,19 +30,19 @@ import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.impl.nioneo.store.Record;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
 
-public class LegacyRelationshipStoreReader implements RelationshipStoreReader
+public class BufferedInputStreamRelationshipStoreReader implements RelationshipStoreReader
 {
     public static final String FROM_VERSION = "RelationshipStore v0.9.9";
     public static final int RECORD_LENGTH = 33;
 
-    private final FileChannel fileChannel;
     private final long maxId;
+    private BufferedInputStream inputStream;
 
-    public LegacyRelationshipStoreReader( String fileName ) throws IOException
+    public BufferedInputStreamRelationshipStoreReader( String fileName ) throws IOException
     {
-        fileChannel = new RandomAccessFile( fileName, "r" ).getChannel();
+        inputStream = new BufferedInputStream( new FileInputStream( fileName ) );
         int endHeaderSize = UTF8.encode( FROM_VERSION ).length;
-        maxId = (fileChannel.size() - endHeaderSize) / RECORD_LENGTH;
+        maxId = (new File( fileName ).length() - endHeaderSize) / RECORD_LENGTH;
     }
 
     @Override
@@ -54,7 +54,7 @@ public class LegacyRelationshipStoreReader implements RelationshipStoreReader
     @Override
     public Iterable<RelationshipRecord> readRelationshipStore() throws IOException
     {
-        final ByteBuffer buffer = ByteBuffer.allocateDirect( RECORD_LENGTH );
+        final byte[] bytes = new byte[RECORD_LENGTH];
 
         return new Iterable<RelationshipRecord>()
         {
@@ -71,24 +71,32 @@ public class LegacyRelationshipStoreReader implements RelationshipStoreReader
                         RelationshipRecord record = null;
                         while ( record == null && id <= maxId )
                         {
-                            buffer.clear();
+                            if ( id >= maxId )
+                            {
+                                return null;
+                            }
+
                             try
                             {
-                                fileChannel.read( buffer );
-                            } catch ( IOException e )
+                                long bytesRead = inputStream.read( bytes );
+                                if (bytesRead != RECORD_LENGTH)
+                                {
+                                    throw new IllegalStateException( "not enough bytes: " + bytesRead );
+                                }
+                            }
+                            catch ( IOException e )
                             {
                                 throw new RuntimeException( e );
                             }
-                            buffer.flip();
-                            long inUseByte = buffer.get();
 
+                            byte inUseByte = bytes[0];
                             boolean inUse = (inUseByte & 0x1) == Record.IN_USE.intValue();
                             if ( inUse )
                             {
-                                long firstNode = LegacyStore.getUnsignedInt( buffer );
+                                long firstNode = LegacyStore.readUnsignedInt( bytes, 1 );
                                 long firstNodeMod = (inUseByte & 0xEL) << 31;
 
-                                long secondNode = LegacyStore.getUnsignedInt( buffer );
+                                long secondNode = LegacyStore.readUnsignedInt( bytes, 5 );
 
                                 // [ xxx,    ][    ,    ][    ,    ][    ,    ] second node high order bits,     0x70000000
                                 // [    ,xxx ][    ,    ][    ,    ][    ,    ] first prev rel high order bits,  0xE000000
@@ -96,7 +104,7 @@ public class LegacyRelationshipStoreReader implements RelationshipStoreReader
                                 // [    ,    ][  xx,x   ][    ,    ][    ,    ] second prev rel high order bits, 0x380000
                                 // [    ,    ][    , xxx][    ,    ][    ,    ] second next rel high order bits, 0x70000
                                 // [    ,    ][    ,    ][xxxx,xxxx][xxxx,xxxx] type
-                                long typeInt = buffer.getInt();
+                                long typeInt = LegacyStore.readUnsignedInt( bytes, 9 );
                                 long secondNodeMod = (typeInt & 0x70000000L) << 4;
                                 int type = (int) (typeInt & 0xFFFF);
 
@@ -105,23 +113,23 @@ public class LegacyRelationshipStoreReader implements RelationshipStoreReader
                                         LegacyStore.longFromIntAndMod( secondNode, secondNodeMod ), type );
                                 record.setInUse( inUse );
 
-                                long firstPrevRel = LegacyStore.getUnsignedInt( buffer );
+                                long firstPrevRel = LegacyStore.readUnsignedInt( bytes, 13 );
                                 long firstPrevRelMod = (typeInt & 0xE000000L) << 7;
                                 record.setFirstPrevRel( LegacyStore.longFromIntAndMod( firstPrevRel, firstPrevRelMod ) );
 
-                                long firstNextRel = LegacyStore.getUnsignedInt( buffer );
+                                long firstNextRel = LegacyStore.readUnsignedInt( bytes, 17 );
                                 long firstNextRelMod = (typeInt & 0x1C00000L) << 10;
                                 record.setFirstNextRel( LegacyStore.longFromIntAndMod( firstNextRel, firstNextRelMod ) );
 
-                                long secondPrevRel = LegacyStore.getUnsignedInt( buffer );
+                                long secondPrevRel = LegacyStore.readUnsignedInt( bytes, 21 );
                                 long secondPrevRelMod = (typeInt & 0x380000L) << 13;
                                 record.setSecondPrevRel( LegacyStore.longFromIntAndMod( secondPrevRel, secondPrevRelMod ) );
 
-                                long secondNextRel = LegacyStore.getUnsignedInt( buffer );
+                                long secondNextRel = LegacyStore.readUnsignedInt( bytes, 25 );
                                 long secondNextRelMod = (typeInt & 0x70000L) << 16;
                                 record.setSecondNextRel( LegacyStore.longFromIntAndMod( secondNextRel, secondNextRelMod ) );
 
-                                long nextProp = LegacyStore.getUnsignedInt( buffer );
+                                long nextProp = LegacyStore.readUnsignedInt( bytes, 29 );
                                 long nextPropMod = (inUseByte & 0xF0L) << 28;
 
                                 record.setNextProp( LegacyStore.longFromIntAndMod( nextProp, nextPropMod ) );
@@ -150,6 +158,6 @@ public class LegacyRelationshipStoreReader implements RelationshipStoreReader
     @Override
     public void close() throws IOException
     {
-        fileChannel.close();
+        inputStream.close();
     }
 }

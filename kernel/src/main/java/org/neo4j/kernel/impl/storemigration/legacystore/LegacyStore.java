@@ -34,7 +34,7 @@ public class LegacyStore
     private LegacyDynamicRecordFetcher dynamicRecordFetcher;
     private LegacyPropertyIndexStoreReader propertyIndexStoreReader;
     private LegacyDynamicStoreReader propertyIndexKeyStoreReader;
-    private LegacyRelationshipStoreReader relationshipStoreReader;
+    private RelationshipStoreReader relationshipStoreReader;
     private LegacyRelationshipTypeStoreReader relationshipTypeStoreReader;
     private LegacyDynamicStoreReader relationshipTypeNameStoreReader;
 
@@ -44,12 +44,20 @@ public class LegacyStore
         initStorage( readerFactory );
     }
 
+    public static int readUnsignedInt( byte[] bytes, int startingAt )
+    {
+        return (((bytes[startingAt] & 0xff) << 24) |
+                ((bytes[startingAt + 1] & 0xff) << 16) |
+                ((bytes[startingAt + 2] & 0xff) << 8) |
+                ((bytes[startingAt + 3] & 0xff)));
+    }
+
     protected void initStorage( ReaderFactory readerFactory ) throws IOException
     {
         propertyStoreReader = new LegacyPropertyStoreReader( getStorageFileName() + ".propertystore.db" );
         dynamicRecordFetcher = new LegacyDynamicRecordFetcher( getStorageFileName() + ".propertystore.db.strings", getStorageFileName() + ".propertystore.db.arrays" );
         nodeStoreReader = readerFactory.newLegacyNodeStoreReader( getStorageFileName() + ".nodestore.db" );
-        relationshipStoreReader = new LegacyRelationshipStoreReader( getStorageFileName() + ".relationshipstore.db" );
+        relationshipStoreReader = readerFactory.newLegacyRelationshipStoreReader( getStorageFileName() + ".relationshipstore.db" );
         relationshipTypeStoreReader = new LegacyRelationshipTypeStoreReader( getStorageFileName() + ".relationshiptypestore.db" );
         relationshipTypeNameStoreReader = new LegacyDynamicStoreReader( getStorageFileName() + ".relationshiptypestore.db.names", LegacyDynamicStoreReader.FROM_VERSION_STRING );
         propertyIndexStoreReader = new LegacyPropertyIndexStoreReader( getStorageFileName() + ".propertystore.db.index" );
@@ -71,7 +79,7 @@ public class LegacyStore
         return nodeStoreReader;
     }
 
-    public LegacyRelationshipStoreReader getRelationshipStoreReader()
+    public RelationshipStoreReader getRelationshipStoreReader()
     {
         return relationshipStoreReader;
     }

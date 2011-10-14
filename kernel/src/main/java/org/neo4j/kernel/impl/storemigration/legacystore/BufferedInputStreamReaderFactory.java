@@ -21,17 +21,17 @@ package org.neo4j.kernel.impl.storemigration.legacystore;
 
 import java.io.IOException;
 
-public class StubbedReaderFactory implements ReaderFactory
+public class BufferedInputStreamReaderFactory implements ReaderFactory
 {
     @Override
     public NodeStoreReader newLegacyNodeStoreReader( String fileName ) throws IOException
     {
-        return new StubbedNodeStoreReader( fileName );
+        return new BufferedInputStreamNodeStoreReader( fileName );
     }
 
     @Override
     public RelationshipStoreReader newLegacyRelationshipStoreReader( String fileName ) throws IOException
     {
-        return new LegacyRelationshipStoreReader( fileName );
+        return new BufferedInputStreamRelationshipStoreReader( fileName );
     }
 }

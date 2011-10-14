@@ -39,7 +39,7 @@ public class ReadRecordsTest
     {
         URL nodeStoreFile = getClass().getResource( "exampledb/neostore.nodestore.db" );
 
-        NodeStoreReader nodeStoreReader = new LegacyNodeStoreReader( nodeStoreFile.getFile() );
+        NodeStoreReader nodeStoreReader = new BufferedInputStreamNodeStoreReader( nodeStoreFile.getFile() );
         assertEquals( 1001, nodeStoreReader.getMaxId() );
         Iterable<NodeRecord> records = nodeStoreReader.readNodeStore();
         int nodeCount = 0;
@@ -56,7 +56,7 @@ public class ReadRecordsTest
     {
         URL nodeStoreFile = getClass().getResource( "exampledb/neostore.relationshipstore.db" );
 
-        LegacyRelationshipStoreReader relationshipStoreReader = new LegacyRelationshipStoreReader( nodeStoreFile.getFile() );
+        RelationshipStoreReader relationshipStoreReader = new LegacyRelationshipStoreReader( nodeStoreFile.getFile() );
         assertEquals( 1500, relationshipStoreReader.getMaxId() );
         Iterable<RelationshipRecord> records = relationshipStoreReader.readRelationshipStore();
         int relationshipCount = 0;

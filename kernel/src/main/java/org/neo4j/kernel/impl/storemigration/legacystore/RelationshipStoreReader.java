@@ -21,17 +21,13 @@ package org.neo4j.kernel.impl.storemigration.legacystore;
 
 import java.io.IOException;
 
-public class StubbedReaderFactory implements ReaderFactory
-{
-    @Override
-    public NodeStoreReader newLegacyNodeStoreReader( String fileName ) throws IOException
-    {
-        return new StubbedNodeStoreReader( fileName );
-    }
+import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
 
-    @Override
-    public RelationshipStoreReader newLegacyRelationshipStoreReader( String fileName ) throws IOException
-    {
-        return new LegacyRelationshipStoreReader( fileName );
-    }
+public interface RelationshipStoreReader
+{
+    long getMaxId();
+
+    Iterable<RelationshipRecord> readRelationshipStore() throws IOException;
+
+    void close() throws IOException;
 }
