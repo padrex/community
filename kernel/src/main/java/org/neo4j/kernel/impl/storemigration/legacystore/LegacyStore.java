@@ -30,7 +30,7 @@ public class LegacyStore
 
     private String storageFileName;
     private LegacyPropertyStoreReader propertyStoreReader;
-    private LegacyNodeStoreReader nodeStoreReader;
+    private NodeStoreReader nodeStoreReader;
     private LegacyDynamicRecordFetcher dynamicRecordFetcher;
     private LegacyPropertyIndexStoreReader propertyIndexStoreReader;
     private LegacyDynamicStoreReader propertyIndexKeyStoreReader;
@@ -38,17 +38,17 @@ public class LegacyStore
     private LegacyRelationshipTypeStoreReader relationshipTypeStoreReader;
     private LegacyDynamicStoreReader relationshipTypeNameStoreReader;
 
-    public LegacyStore( String storageFileName ) throws IOException
+    public LegacyStore( String storageFileName, ReaderFactory readerFactory ) throws IOException
     {
         this.storageFileName = storageFileName;
-        initStorage();
+        initStorage( readerFactory );
     }
 
-    protected void initStorage() throws IOException
+    protected void initStorage( ReaderFactory readerFactory ) throws IOException
     {
         propertyStoreReader = new LegacyPropertyStoreReader( getStorageFileName() + ".propertystore.db" );
         dynamicRecordFetcher = new LegacyDynamicRecordFetcher( getStorageFileName() + ".propertystore.db.strings", getStorageFileName() + ".propertystore.db.arrays" );
-        nodeStoreReader = new LegacyNodeStoreReader( getStorageFileName() + ".nodestore.db" );
+        nodeStoreReader = readerFactory.newLegacyNodeStoreReader( getStorageFileName() + ".nodestore.db" );
         relationshipStoreReader = new LegacyRelationshipStoreReader( getStorageFileName() + ".relationshipstore.db" );
         relationshipTypeStoreReader = new LegacyRelationshipTypeStoreReader( getStorageFileName() + ".relationshiptypestore.db" );
         relationshipTypeNameStoreReader = new LegacyDynamicStoreReader( getStorageFileName() + ".relationshiptypestore.db.names", LegacyDynamicStoreReader.FROM_VERSION_STRING );
@@ -66,7 +66,7 @@ public class LegacyStore
         return propertyStoreReader;
     }
 
-    public LegacyNodeStoreReader getNodeStoreReader()
+    public NodeStoreReader getNodeStoreReader()
     {
         return nodeStoreReader;
     }

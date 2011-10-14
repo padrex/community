@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
+import org.neo4j.kernel.impl.storemigration.legacystore.LegacyReaderFactory;
 import org.neo4j.kernel.impl.storemigration.legacystore.LegacyStore;
 import org.neo4j.kernel.impl.util.FileUtils;
 
@@ -96,7 +97,7 @@ public class StoreUpgrader
         NeoStore neoStore = new NeoStore( upgradeConfig );
         try
         {
-            storeMigrator.migrate( new LegacyStore( storageFileName ), neoStore );
+            storeMigrator.migrate( new LegacyStore( storageFileName, new LegacyReaderFactory() ), neoStore );
         }
         catch ( IOException e )
         {

@@ -30,7 +30,7 @@ import org.neo4j.helpers.collection.PrefetchingIterator;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.Record;
 
-public class LegacyNodeStoreReader implements NodeStoreReader
+public class BufferedInputStreamNodeStoreReader implements NodeStoreReader
 {
     public static final String FROM_VERSION = "NodeStore v0.9.9";
     public static final int RECORD_LENGTH = 9;
@@ -38,7 +38,7 @@ public class LegacyNodeStoreReader implements NodeStoreReader
     private final FileChannel fileChannel;
     private final long maxId;
 
-    public LegacyNodeStoreReader( String fileName ) throws IOException
+    public BufferedInputStreamNodeStoreReader( String fileName ) throws IOException
     {
         fileChannel = new RandomAccessFile( fileName, "r" ).getChannel();
         int endHeaderSize = UTF8.encode( FROM_VERSION ).length;

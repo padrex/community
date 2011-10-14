@@ -27,7 +27,6 @@ import static org.neo4j.graphdb.DynamicRelationshipType.withName;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,53 +39,77 @@ import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.PropertyType;
 import org.neo4j.kernel.impl.storemigration.legacystore.LegacyReaderFactory;
 import org.neo4j.kernel.impl.storemigration.legacystore.LegacyStore;
+import org.neo4j.kernel.impl.storemigration.legacystore.StubbedReaderFactory;
 import org.neo4j.kernel.impl.storemigration.monitoring.MigrationProgressMonitor;
 import org.neo4j.kernel.impl.util.FileUtils;
 
-public class StoreMigratorTest
+public class StoreMigratorSpeedBenchmark
 {
     @SuppressWarnings({"unchecked"})
     @Test
     public void shouldMigrate() throws IOException
     {
-        URL legacyStoreResource = getClass().getResource( "legacystore/exampledb/neostore" );
+        String storageFileName = "/Users/apcj/projects/neo4j/legacy-store-creator/target/output-database/neostore";
 
-        LegacyStore legacyStore = new LegacyStore( legacyStoreResource.getFile(), new LegacyReaderFactory() );
+        final LegacyStore referenceLegacyStore = new LegacyStore( storageFileName, new LegacyReaderFactory() );
 
-        HashMap config = MigrationTestUtils.defaultConfig();
-        File outputDir = new File( "target/outputDatabase" );
-        FileUtils.deleteRecursively( outputDir );
-        assertTrue( outputDir.mkdirs() );
+        long reference = time( new Runnable()
+        {
+            public void run()
+            {
+                migrate( referenceLegacyStore );
+            }
+        } );
 
-        String storeFileName = "target/outputDatabase/neostore";
-        config.put( "neo_store", storeFileName );
-        NeoStore.createStore( storeFileName, config );
-        NeoStore neoStore = new NeoStore( config );
+        final LegacyStore trialLegacyStore = new LegacyStore( storageFileName, new StubbedReaderFactory() );
 
-        ListAccumulatorMigrationProgressMonitor monitor = new ListAccumulatorMigrationProgressMonitor();
+        long trial = time( new Runnable()
+        {
+            public void run()
+            {
+                migrate( trialLegacyStore );
+            }
+        } );
 
-        new StoreMigrator( monitor ).migrate( legacyStore, neoStore );
+        System.out.printf( "reference = %ds%n", reference / 1000 );
+        System.out.printf( "trial = %ds%n", trial / 1000 );
+        System.out.println( String.format( "Trial is %f%% better than reference", (reference - trial) / (double) reference * 100 ) );
+    }
 
-        neoStore.close();
+    private long time( Runnable runnable )
+    {
+        long startTime = System.currentTimeMillis();
+        runnable.run();
+        return System.currentTimeMillis() - startTime;
+    }
 
-        assertEquals( 100, monitor.events.size() );
-        assertTrue( monitor.started );
-        assertTrue( monitor.finished );
+    private void migrate( LegacyStore legacyStore )
+    {
+        try
+        {
+            HashMap config = MigrationTestUtils.defaultConfig();
+            File outputDir = new File( "target/outputDatabase" );
+            FileUtils.deleteRecursively( outputDir );
+            assertTrue( outputDir.mkdirs() );
 
-        GraphDatabaseService database = new EmbeddedGraphDatabase( outputDir.getPath() );
+            String storeFileName = "target/outputDatabase/neostore";
+            config.put( "neo_store", storeFileName );
+            NeoStore.createStore( storeFileName, config );
+            NeoStore neoStore = new NeoStore( config );
 
-        DatabaseContentVerifier verifier = new DatabaseContentVerifier( database );
-        verifier.verifyNodes();
-        verifier.verifyRelationships();
-        verifier.verifyNodeIdsReused();
-        verifier.verifyRelationshipIdsReused();
+            ListAccumulatorMigrationProgressMonitor monitor = new ListAccumulatorMigrationProgressMonitor();
 
-        database.shutdown();
+            new StoreMigrator( monitor ).migrate( legacyStore, neoStore );
+            neoStore.close();
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
     }
 
     private static class DatabaseContentVerifier
@@ -149,7 +172,8 @@ public class StoreMigratorTest
             {
                 database.getNodeById( 1 );
                 fail( "Node 2 should not exist" );
-            } catch ( NotFoundException e )
+            }
+            catch ( NotFoundException e )
             {
                 //expected
             }
@@ -159,7 +183,8 @@ public class StoreMigratorTest
                 Node newNode = database.createNode();
                 assertEquals( 1, newNode.getId() );
                 transaction.success();
-            } finally
+            }
+            finally
             {
                 transaction.finish();
             }
@@ -175,7 +200,8 @@ public class StoreMigratorTest
                 Relationship relationship1 = node1.createRelationshipTo( node2, withName( "REUSE" ) );
                 assertEquals( 0, relationship1.getId() );
                 transaction.success();
-            } finally
+            }
+            finally
             {
                 transaction.finish();
             }

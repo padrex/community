@@ -39,7 +39,7 @@ public class ReadRecordsTest
     {
         URL nodeStoreFile = getClass().getResource( "exampledb/neostore.nodestore.db" );
 
-        LegacyNodeStoreReader nodeStoreReader = new LegacyNodeStoreReader( nodeStoreFile.getFile() );
+        NodeStoreReader nodeStoreReader = new LegacyNodeStoreReader( nodeStoreFile.getFile() );
         assertEquals( 1001, nodeStoreReader.getMaxId() );
         Iterable<NodeRecord> records = nodeStoreReader.readNodeStore();
         int nodeCount = 0;
@@ -115,7 +115,7 @@ public class ReadRecordsTest
     public void shouldReadPropertyIndexRecords() throws IOException
     {
         URL legacyStoreResource = getClass().getResource( "exampledb/neostore" );
-        LegacyStore legacyStore = new LegacyStore( legacyStoreResource.getFile() );
+        LegacyStore legacyStore = new LegacyStore( legacyStoreResource.getFile(), new LegacyReaderFactory() );
 
         LegacyPropertyIndexStoreReader propertyIndexStoreReader = legacyStore.getPropertyIndexStoreReader();
         int recordCount = 0;
@@ -130,7 +130,7 @@ public class ReadRecordsTest
     public void shouldReadRelationshipTypeRecords() throws IOException
     {
         URL legacyStoreResource = getClass().getResource( "exampledb/neostore" );
-        LegacyStore legacyStore = new LegacyStore( legacyStoreResource.getFile() );
+        LegacyStore legacyStore = new LegacyStore( legacyStoreResource.getFile(), new LegacyReaderFactory() );
 
         LegacyRelationshipTypeStoreReader relationshipTypeStoreReader = legacyStore.getRelationshipTypeStoreReader();
         int recordCount = 0;

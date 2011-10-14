@@ -28,6 +28,7 @@ import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
+import org.neo4j.kernel.impl.storemigration.legacystore.LegacyReaderFactory;
 import org.neo4j.kernel.impl.storemigration.legacystore.LegacyStore;
 import org.neo4j.kernel.impl.storemigration.monitoring.VisibleMigrationProgressMonitor;
 
@@ -43,7 +44,7 @@ public class StoreMigrationTool
 
     private void run( String legacyStoreDirectory, String targetStoreDirectory ) throws IOException
     {
-        LegacyStore legacyStore = new LegacyStore( new File( new File( legacyStoreDirectory ), NeoStore.DEFAULT_NAME ).getPath() );
+        LegacyStore legacyStore = new LegacyStore( new File( new File( legacyStoreDirectory ), NeoStore.DEFAULT_NAME ).getPath(), new LegacyReaderFactory() );
 
         HashMap config = new HashMap();
         config.put( IdGeneratorFactory.class, CommonFactories.defaultIdGeneratorFactory() );
