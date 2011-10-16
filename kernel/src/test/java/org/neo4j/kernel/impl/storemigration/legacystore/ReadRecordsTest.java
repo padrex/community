@@ -73,7 +73,7 @@ public class ReadRecordsTest
     {
         URL propertyStoreFile = getClass().getResource( "exampledb/neostore.propertystore.db" );
 
-        LegacyPropertyRecord propertyRecord = new LegacyPropertyStoreReader( propertyStoreFile.getFile() ).readPropertyRecord( 24 );
+        LegacyPropertyRecord propertyRecord = new LegacyPropertyStoreReader( propertyStoreFile.getFile(), new LegacyReaderFactory() ).readPropertyRecord( 24 );
 
         int keyIndexId = propertyRecord.getKeyIndexId();
         assertEquals( 2, keyIndexId );
@@ -88,7 +88,7 @@ public class ReadRecordsTest
         URL stringStoreFile = getClass().getResource( "exampledb/neostore.propertystore.db.strings" );
         URL arrayStoreFile = getClass().getResource( "exampledb/neostore.propertystore.db.arrays" );
 
-        LegacyPropertyRecord propertyRecord = new LegacyPropertyStoreReader( propertyStoreFile.getFile() ).readPropertyRecord( 25 );
+        LegacyPropertyRecord propertyRecord = new LegacyPropertyStoreReader( propertyStoreFile.getFile(), new LegacyReaderFactory() ).readPropertyRecord( 25 );
 
         int keyIndexId = propertyRecord.getKeyIndexId();
         assertEquals( 3, keyIndexId );
@@ -103,7 +103,7 @@ public class ReadRecordsTest
         URL stringStoreFile = getClass().getResource( "exampledb/neostore.propertystore.db.strings" );
         URL arrayStoreFile = getClass().getResource( "exampledb/neostore.propertystore.db.arrays" );
 
-        LegacyPropertyRecord propertyRecord2 = new LegacyPropertyStoreReader( propertyStoreFile.getFile() ).readPropertyRecord( 32 );
+        LegacyPropertyRecord propertyRecord2 = new LegacyPropertyStoreReader( propertyStoreFile.getFile(), new LegacyReaderFactory() ).readPropertyRecord( 32 );
 
         int keyIndexId = propertyRecord2.getKeyIndexId();
         assertEquals( 10, keyIndexId );

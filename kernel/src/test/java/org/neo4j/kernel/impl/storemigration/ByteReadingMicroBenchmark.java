@@ -34,6 +34,7 @@ import org.junit.Test;
 import org.neo4j.kernel.impl.nioneo.store.Buffer;
 import org.neo4j.kernel.impl.nioneo.store.OperationType;
 import org.neo4j.kernel.impl.nioneo.store.PersistenceWindowPool;
+import org.neo4j.kernel.impl.nioneo.store.WindowPool;
 import org.neo4j.kernel.impl.storemigration.legacystore.LegacyStore;
 import org.neo4j.test.TargetDirectory;
 
@@ -54,6 +55,7 @@ public class ByteReadingMicroBenchmark
 
         time( new SingleByteBuffer( file ) );
         time( new PersistenceWindow( file ) );
+        time( new TotallyMappedWindowPool( file ) );
         time( new BufferedInputStream( file ) );
     }
 
@@ -131,6 +133,43 @@ public class ByteReadingMicroBenchmark
             {
                 FileChannel fileChannel = new RandomAccessFile( file, "r" ).getChannel();
                 PersistenceWindowPool windowPool = new PersistenceWindowPool( file.getName(), 4, fileChannel, MILLION, true, true );
+
+                int sum = 0;
+                for ( int i = 0; i < NUMBER_OF_INTEGERS; i++ )
+                {
+                    org.neo4j.kernel.impl.nioneo.store.PersistenceWindow window = windowPool.acquire( i, OperationType.READ );
+                    Buffer buffer = window.getOffsettedBuffer( i );
+                    sum += buffer.getInt();
+                    windowPool.release( window );
+                }
+                if ( sum != NUMBER_OF_INTEGERS )
+                {
+                    throw new IllegalStateException( "unexpected sum: " + sum );
+                }
+                fileChannel.close();
+            }
+            catch ( IOException e )
+            {
+                throw new RuntimeException( e );
+            }
+        }
+    }
+
+    private class TotallyMappedWindowPool implements Runnable
+    {
+        private File file;
+
+        public TotallyMappedWindowPool( File file ) throws FileNotFoundException
+        {
+            this.file = file;
+        }
+
+        public void run()
+        {
+            try
+            {
+                FileChannel fileChannel = new RandomAccessFile( file, "r" ).getChannel();
+                WindowPool windowPool = new org.neo4j.kernel.impl.nioneo.store.TotallyMappedWindowPool( file.getName(), 4, fileChannel, MILLION, true, true );
 
                 int sum = 0;
                 for ( int i = 0; i < NUMBER_OF_INTEGERS; i++ )

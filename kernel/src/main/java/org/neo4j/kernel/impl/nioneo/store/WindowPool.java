@@ -17,18 +17,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.storemigration.legacystore;
+package org.neo4j.kernel.impl.nioneo.store;
 
-import java.io.IOException;
-import java.nio.channels.FileChannel;
-
-import org.neo4j.kernel.impl.nioneo.store.WindowPool;
-
-public interface ReaderFactory
+public interface WindowPool
 {
-    NodeStoreReader newLegacyNodeStoreReader( String fileName ) throws IOException;
+    PersistenceWindow acquire( long position, OperationType operationType );
 
-    RelationshipStoreReader newLegacyRelationshipStoreReader( String fileName ) throws IOException;
-
-    WindowPool newPersistenceWindowPool( String fileName, int recordLength, FileChannel fileChannel, long mappedMem, boolean useMemoryMappedBuffers, boolean readOnly );
+    void release( PersistenceWindow window );
 }

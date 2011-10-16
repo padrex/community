@@ -31,18 +31,19 @@ import org.neo4j.kernel.impl.nioneo.store.OperationType;
 import org.neo4j.kernel.impl.nioneo.store.PersistenceWindow;
 import org.neo4j.kernel.impl.nioneo.store.PersistenceWindowPool;
 import org.neo4j.kernel.impl.nioneo.store.Record;
+import org.neo4j.kernel.impl.nioneo.store.WindowPool;
 
 public class LegacyPropertyStoreReader
 {
     public static final String FROM_VERSION = "PropertyStore v0.9.9";
     public static final int RECORD_LENGTH = 25;
-    private PersistenceWindowPool windowPool;
+    private WindowPool windowPool;
     private final FileChannel fileChannel;
 
-    public LegacyPropertyStoreReader( String fileName ) throws FileNotFoundException
+    public LegacyPropertyStoreReader( String fileName, ReaderFactory readerFactory ) throws FileNotFoundException
     {
         fileChannel = new RandomAccessFile( fileName, "r" ).getChannel();
-        windowPool = new PersistenceWindowPool( fileName,
+        windowPool = readerFactory.newPersistenceWindowPool( fileName,
                 RECORD_LENGTH, fileChannel, CommonAbstractStore.calculateMappedMemory( null, fileName ),
                 true, true );
     }

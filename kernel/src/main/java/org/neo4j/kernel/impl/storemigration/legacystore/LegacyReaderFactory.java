@@ -20,6 +20,10 @@
 package org.neo4j.kernel.impl.storemigration.legacystore;
 
 import java.io.IOException;
+import java.nio.channels.FileChannel;
+
+import org.neo4j.kernel.impl.nioneo.store.PersistenceWindowPool;
+import org.neo4j.kernel.impl.nioneo.store.WindowPool;
 
 public class LegacyReaderFactory implements ReaderFactory
 {
@@ -33,5 +37,11 @@ public class LegacyReaderFactory implements ReaderFactory
     public RelationshipStoreReader newLegacyRelationshipStoreReader( String fileName ) throws IOException
     {
         return new LegacyRelationshipStoreReader( fileName );
+    }
+
+    @Override
+    public WindowPool newPersistenceWindowPool( String fileName, int recordLength, FileChannel fileChannel, long mappedMem, boolean useMemoryMappedBuffers, boolean readOnly )
+    {
+        return new PersistenceWindowPool( fileName, recordLength, fileChannel, mappedMem, useMemoryMappedBuffers, readOnly );
     }
 }

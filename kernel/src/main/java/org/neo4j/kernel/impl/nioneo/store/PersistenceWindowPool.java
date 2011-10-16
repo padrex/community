@@ -38,7 +38,7 @@ import java.util.logging.Logger;
  * that the most frequently used records/blocks (be it for read or write
  * operations) are encapsulated by a memory mapped persistence window.
  */
-public class PersistenceWindowPool
+public class PersistenceWindowPool implements WindowPool
 {
     private static final int MAX_BRICK_COUNT = 100000;
 

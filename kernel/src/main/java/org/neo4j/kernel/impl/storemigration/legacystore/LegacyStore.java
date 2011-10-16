@@ -54,7 +54,7 @@ public class LegacyStore
 
     protected void initStorage( ReaderFactory readerFactory ) throws IOException
     {
-        propertyStoreReader = new LegacyPropertyStoreReader( getStorageFileName() + ".propertystore.db" );
+        propertyStoreReader = new LegacyPropertyStoreReader( getStorageFileName() + ".propertystore.db", readerFactory );
         dynamicRecordFetcher = new LegacyDynamicRecordFetcher( getStorageFileName() + ".propertystore.db.strings", getStorageFileName() + ".propertystore.db.arrays" );
         nodeStoreReader = readerFactory.newLegacyNodeStoreReader( getStorageFileName() + ".nodestore.db" );
         relationshipStoreReader = readerFactory.newLegacyRelationshipStoreReader( getStorageFileName() + ".relationshipstore.db" );
