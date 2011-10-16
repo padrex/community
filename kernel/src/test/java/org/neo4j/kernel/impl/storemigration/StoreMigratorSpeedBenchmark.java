@@ -28,10 +28,10 @@ import java.util.HashMap;
 
 import org.junit.Test;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
-import org.neo4j.kernel.impl.storemigration.legacystore.BufferedInputStreamReaderFactory;
 import org.neo4j.kernel.impl.storemigration.legacystore.LegacyReaderFactory;
 import org.neo4j.kernel.impl.storemigration.legacystore.LegacyStore;
-import org.neo4j.kernel.impl.storemigration.monitoring.SilentMigrationProgressMonitor;
+import org.neo4j.kernel.impl.storemigration.legacystore.SingleByteBufferReaderFactory;
+import org.neo4j.kernel.impl.storemigration.monitoring.VisibleMigrationProgressMonitor;
 import org.neo4j.kernel.impl.util.FileUtils;
 
 public class StoreMigratorSpeedBenchmark
@@ -41,6 +41,8 @@ public class StoreMigratorSpeedBenchmark
     {
         URL legacyStoreResource = getClass().getResource( "legacystore/exampledb/neostore" );
         String storageFileName = legacyStoreResource.getFile();
+//        String storageFileName = "/Users/apcj/projects/daqapo/var/nioneo/neostore";
+//        String storageFileName = "/Users/apcj/projects/neo4j/legacy-store-creator/target/output-database/neostore";
 
         final LegacyStore referenceLegacyStore = new LegacyStore( storageFileName, new LegacyReaderFactory() );
 
@@ -52,7 +54,7 @@ public class StoreMigratorSpeedBenchmark
             }
         } );
 
-        final LegacyStore trialLegacyStore = new LegacyStore( storageFileName, new BufferedInputStreamReaderFactory() );
+        final LegacyStore trialLegacyStore = new LegacyStore( storageFileName, new SingleByteBufferReaderFactory() );
 
         long trial = time( new Runnable()
         {
@@ -88,7 +90,7 @@ public class StoreMigratorSpeedBenchmark
             NeoStore.createStore( storeFileName, config );
             NeoStore neoStore = new NeoStore( config );
 
-            new StoreMigrator( new SilentMigrationProgressMonitor() ).migrate( legacyStore, neoStore );
+            new StoreMigrator( new VisibleMigrationProgressMonitor(System.out) ).migrate( legacyStore, neoStore );
             neoStore.close();
         }
         catch ( IOException e )
