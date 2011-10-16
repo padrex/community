@@ -52,17 +52,12 @@ public class ByteReadingMicroBenchmark
 
         writeIntegers( file );
 
-        long singleByteBuffer = time( new SingleByteBuffer( file ) );
-        System.out.println( "singleByteBuffer = " + nanosToMillis( singleByteBuffer ) );
-
-        long persistenceWindow = time( new PersistenceWindow( file ) );
-        System.out.println( "persistenceWindow = " + nanosToMillis( persistenceWindow ) );
-
-        long bufferedInputStream = time( new BufferedInputStream( file ) );
-        System.out.println( "bufferedInputStream = " + nanosToMillis( bufferedInputStream ) );
+        time( new SingleByteBuffer( file ) );
+        time( new PersistenceWindow( file ) );
+        time( new BufferedInputStream( file ) );
     }
 
-    private long nanosToMillis( long nanos )
+    private static long nanosToMillis( long nanos )
     {
         return nanos / MILLION;
     }
@@ -80,11 +75,12 @@ public class ByteReadingMicroBenchmark
         outputStream.close();
     }
 
-    public static long time( Runnable task )
+    public static void time( Runnable task )
     {
         long startTime = System.nanoTime();
         task.run();
-        return System.nanoTime() - startTime;
+        long duration = System.nanoTime() - startTime;
+        System.out.printf( "%s took %d%n", task.getClass().getSimpleName(), nanosToMillis( duration ) );
     }
 
     private class SingleByteBuffer implements Runnable
