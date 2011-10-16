@@ -23,7 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.util.HashMap;
 
 import org.junit.Test;
@@ -39,10 +38,19 @@ public class StoreMigratorSpeedBenchmark
     @Test
     public void shouldMigrate() throws IOException
     {
-        URL legacyStoreResource = getClass().getResource( "legacystore/exampledb/neostore" );
-        String storageFileName = legacyStoreResource.getFile();
-//        String storageFileName = "/Users/apcj/projects/daqapo/var/nioneo/neostore";
-//        String storageFileName = "/Users/apcj/projects/neo4j/legacy-store-creator/target/output-database/neostore";
+//        URL legacyStoreResource = getClass().getResource( "legacystore/exampledb/neostore" );
+//        String storageFileName = legacyStoreResource.getFile();
+        String storageFileName = "/Users/apcj/projects/neo4j/legacy-store-creator/target/output-database/neostore";
+
+        final LegacyStore warmUpLegacyStore = new LegacyStore( storageFileName, new LegacyReaderFactory() );
+
+        long referenceWarmUp = time( new Runnable()
+        {
+            public void run()
+            {
+                migrate( warmUpLegacyStore );
+            }
+        } );
 
         final LegacyStore referenceLegacyStore = new LegacyStore( storageFileName, new LegacyReaderFactory() );
 
@@ -64,6 +72,7 @@ public class StoreMigratorSpeedBenchmark
             }
         } );
 
+        System.out.printf( "referenceWarmUp = %ds%n", referenceWarmUp / 1000 );
         System.out.printf( "reference = %ds%n", reference / 1000 );
         System.out.printf( "trial = %ds%n", trial / 1000 );
         System.out.println( String.format( "Trial is %f%% faster than reference", (reference - trial) / (double) reference * 100 ) );
@@ -92,6 +101,7 @@ public class StoreMigratorSpeedBenchmark
 
             new StoreMigrator( new VisibleMigrationProgressMonitor(System.out) ).migrate( legacyStore, neoStore );
             neoStore.close();
+            legacyStore.close();
         }
         catch ( IOException e )
         {

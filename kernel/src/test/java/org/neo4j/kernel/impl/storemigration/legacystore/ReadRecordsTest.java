@@ -92,7 +92,7 @@ public class ReadRecordsTest
 
         int keyIndexId = propertyRecord.getKeyIndexId();
         assertEquals( 3, keyIndexId );
-        Object value = propertyRecord.getType().getValue( propertyRecord, new LegacyDynamicRecordFetcher( stringStoreFile.getFile(), arrayStoreFile.getFile() ) );
+        Object value = propertyRecord.getType().getValue( propertyRecord, new LegacyDynamicRecordFetcher( stringStoreFile.getFile(), arrayStoreFile.getFile(), new LegacyReaderFactory() ) );
         assertEquals( 1000, ((String) value).length() );
     }
 
@@ -107,7 +107,7 @@ public class ReadRecordsTest
 
         int keyIndexId = propertyRecord2.getKeyIndexId();
         assertEquals( 10, keyIndexId );
-        Object value = propertyRecord2.getType().getValue( propertyRecord2, new LegacyDynamicRecordFetcher( stringStoreFile.getFile(), arrayStoreFile.getFile() ) );
+        Object value = propertyRecord2.getType().getValue( propertyRecord2, new LegacyDynamicRecordFetcher( stringStoreFile.getFile(), arrayStoreFile.getFile(), new LegacyReaderFactory() ) );
         assertArrayEquals( MigrationTestUtils.makeLongArray(), (int[]) value );
     }
 

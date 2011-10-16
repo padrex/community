@@ -35,10 +35,10 @@ public class LegacyDynamicRecordFetcher
     private LegacyDynamicStoreReader stringPropertyStore;
     private LegacyDynamicStoreReader arrayPropertyStore;
 
-    public LegacyDynamicRecordFetcher( String stringStoreFileName, String arrayStoreFileName ) throws IOException
+    public LegacyDynamicRecordFetcher( String stringStoreFileName, String arrayStoreFileName, ReaderFactory readerFactory ) throws IOException
     {
-        stringPropertyStore = new LegacyDynamicStoreReader( stringStoreFileName, LegacyDynamicStoreReader.FROM_VERSION_STRING );
-        arrayPropertyStore = new LegacyDynamicStoreReader( arrayStoreFileName, LegacyDynamicStoreReader.FROM_VERSION_ARRAY );
+        stringPropertyStore = new LegacyDynamicStoreReader( stringStoreFileName, LegacyDynamicStoreReader.FROM_VERSION_STRING, readerFactory );
+        arrayPropertyStore = new LegacyDynamicStoreReader( arrayStoreFileName, LegacyDynamicStoreReader.FROM_VERSION_ARRAY, readerFactory );
     }
 
     public List<LegacyDynamicRecord> readDynamicRecords( LegacyPropertyRecord record )

@@ -40,15 +40,28 @@ import java.util.logging.Logger;
  */
 public class TotallyMappedWindowPool implements WindowPool
 {
-    PersistenceWindow theWindow;
+    PersistenceWindow[] persistenceWindows;
+    private int recordsPerWindow;
+    private int recordLength;
 
-    public TotallyMappedWindowPool( String storeName, int blockSize,
+    public TotallyMappedWindowPool( String storeName, int recordLength,
                                     FileChannel fileChannel, long mappedMem,
                                     boolean useMemoryMappedBuffers, boolean readOnly )
     {
+        this.recordLength = recordLength;
+        recordsPerWindow = Integer.MAX_VALUE / recordLength;
         try
         {
-            theWindow = new MappedPersistenceWindow( 0, blockSize, (int) fileChannel.size(), fileChannel, FileChannel.MapMode.READ_ONLY );
+            long fileSize = fileChannel.size();
+            long recordCount = fileSize / recordLength;
+            int windowCount = (int) (recordCount / recordsPerWindow) + 1;
+            persistenceWindows = new PersistenceWindow[windowCount];
+            for (int iWindow = 0; iWindow < windowCount; iWindow++) {
+                int startPosition = iWindow * recordsPerWindow;
+                int windowSize = recordCount - startPosition < recordsPerWindow ?
+                        (int) (recordCount - startPosition) * recordLength : recordsPerWindow * recordLength;
+                persistenceWindows[iWindow] = new MappedPersistenceWindow( startPosition, recordLength, windowSize, fileChannel, FileChannel.MapMode.READ_ONLY );
+            }
         }
         catch ( IOException e )
         {
@@ -56,33 +69,12 @@ public class TotallyMappedWindowPool implements WindowPool
         }
     }
 
-    /**
-     * Acquires a windows for <CODE>position</CODE> and <CODE>operationType</CODE>
-     * locking the window preventing other threads from using it.
-     *
-     * @param position
-     *            The position the needs to be encapsulated by the window
-     * @param operationType
-     *            The type of operation (READ or WRITE)
-     * @return A locked window encapsulating the position
-     * @throws java.io.IOException
-     *             If unable to acquire the window
-     */
     @Override
     public PersistenceWindow acquire( long position, OperationType operationType )
     {
-        return theWindow;
+        return persistenceWindows[((int) (position / recordsPerWindow ))];
     }
 
-    /**
-     * Releases a window used for an operation back to the pool and unlocks it
-     * so other threads may use it.
-     *
-     * @param window
-     *            The window to be released
-     * @throws java.io.IOException
-     *             If unable to release window
-     */
     @Override
     public void release( PersistenceWindow window )
     {

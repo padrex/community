@@ -55,13 +55,13 @@ public class LegacyStore
     protected void initStorage( ReaderFactory readerFactory ) throws IOException
     {
         propertyStoreReader = new LegacyPropertyStoreReader( getStorageFileName() + ".propertystore.db", readerFactory );
-        dynamicRecordFetcher = new LegacyDynamicRecordFetcher( getStorageFileName() + ".propertystore.db.strings", getStorageFileName() + ".propertystore.db.arrays" );
+        dynamicRecordFetcher = new LegacyDynamicRecordFetcher( getStorageFileName() + ".propertystore.db.strings", getStorageFileName() + ".propertystore.db.arrays", readerFactory );
         nodeStoreReader = readerFactory.newLegacyNodeStoreReader( getStorageFileName() + ".nodestore.db" );
         relationshipStoreReader = readerFactory.newLegacyRelationshipStoreReader( getStorageFileName() + ".relationshipstore.db" );
         relationshipTypeStoreReader = new LegacyRelationshipTypeStoreReader( getStorageFileName() + ".relationshiptypestore.db" );
-        relationshipTypeNameStoreReader = new LegacyDynamicStoreReader( getStorageFileName() + ".relationshiptypestore.db.names", LegacyDynamicStoreReader.FROM_VERSION_STRING );
+        relationshipTypeNameStoreReader = new LegacyDynamicStoreReader( getStorageFileName() + ".relationshiptypestore.db.names", LegacyDynamicStoreReader.FROM_VERSION_STRING, readerFactory );
         propertyIndexStoreReader = new LegacyPropertyIndexStoreReader( getStorageFileName() + ".propertystore.db.index" );
-        propertyIndexKeyStoreReader = new LegacyDynamicStoreReader( getStorageFileName() + ".propertystore.db.index.keys", LegacyDynamicStoreReader.FROM_VERSION_STRING );
+        propertyIndexKeyStoreReader = new LegacyDynamicStoreReader( getStorageFileName() + ".propertystore.db.index.keys", LegacyDynamicStoreReader.FROM_VERSION_STRING, readerFactory );
     }
 
     public String getStorageFileName()
@@ -117,5 +117,17 @@ public class LegacyStore
     public LegacyRelationshipTypeStoreReader getRelationshipTypeStoreReader()
     {
         return relationshipTypeStoreReader;
+    }
+
+    public void close() throws IOException
+    {
+        propertyStoreReader.close();
+        nodeStoreReader.close();
+        dynamicRecordFetcher.close();
+        propertyIndexStoreReader.close();
+        propertyIndexKeyStoreReader.close();
+        relationshipStoreReader.close();
+        relationshipTypeStoreReader.close();
+        relationshipTypeNameStoreReader.close();
     }
 }

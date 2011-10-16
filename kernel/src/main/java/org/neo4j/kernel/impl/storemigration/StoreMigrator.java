@@ -87,7 +87,7 @@ public class StoreMigrator
             legacyStore.getPropertyStoreReader().close();
             migrateRelationshipTypes( neoStore.getRelationshipTypeStore() );
 //        migrateIdGenerators( neoStore );
-            legacyStore.getDynamicRecordFetcher().close();
+            legacyStore.close();
         }
 
         private void migrateNodes( NodeStore nodeStore, PropertyWriter propertyWriter ) throws IOException

@@ -68,4 +68,9 @@ public class LegacyRelationshipTypeStoreReader
         fileChannel.close();
         return records;
     }
+
+    public void close()
+    {
+        // no resources need to be closed
+    }
 }

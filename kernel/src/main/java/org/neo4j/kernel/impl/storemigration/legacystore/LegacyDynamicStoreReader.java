@@ -32,22 +32,22 @@ import org.neo4j.kernel.impl.nioneo.store.CommonAbstractStore;
 import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
 import org.neo4j.kernel.impl.nioneo.store.OperationType;
 import org.neo4j.kernel.impl.nioneo.store.PersistenceWindow;
-import org.neo4j.kernel.impl.nioneo.store.PersistenceWindowPool;
 import org.neo4j.kernel.impl.nioneo.store.Record;
+import org.neo4j.kernel.impl.nioneo.store.WindowPool;
 
 public class LegacyDynamicStoreReader
 {
     public static final String FROM_VERSION_ARRAY = "ArrayPropertyStore v0.9.9";
     public static final String FROM_VERSION_STRING = "StringPropertyStore v0.9.9";
 
-    private PersistenceWindowPool windowPool;
+    private WindowPool windowPool;
     private int blockSize;
 
     // in_use(byte)+prev_block(int)+nr_of_bytes(int)+next_block(int)
     protected static final int BLOCK_HEADER_SIZE = 1 + 4 + 4 + 4;
     private final FileChannel fileChannel;
 
-    public LegacyDynamicStoreReader( String fileName, String fromVersionArray ) throws IOException
+    public LegacyDynamicStoreReader( String fileName, String fromVersionArray, ReaderFactory readerFactory ) throws IOException
     {
         fileChannel = new RandomAccessFile( fileName, "r" ).getChannel();
         long fileSize = fileChannel.size();
@@ -62,7 +62,7 @@ public class LegacyDynamicStoreReader
         buffer.flip();
         blockSize = buffer.getInt();
 
-        windowPool = new PersistenceWindowPool( fileName,
+        windowPool = readerFactory.newPersistenceWindowPool( fileName,
                 blockSize, fileChannel, CommonAbstractStore.calculateMappedMemory( null, fileName ),
                 true, true );
     }
