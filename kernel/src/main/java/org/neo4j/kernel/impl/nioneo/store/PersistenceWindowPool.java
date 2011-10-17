@@ -547,7 +547,7 @@ public class PersistenceWindowPool implements WindowPool
                 catch ( MappedMemException e )
                 {
                     ooe++;
-                    logWarn( "Unable to memory map" );
+                    logWarn( "Unable to memory map", e );
                 }
                 catch ( OutOfMemoryError e )
                 {
@@ -582,7 +582,7 @@ public class PersistenceWindowPool implements WindowPool
                     catch ( MappedMemException e )
                     {
                         ooe++;
-                        logWarn( "Unable to memory map" );
+                        logWarn( "Unable to memory map", e );
                     }
                     catch ( OutOfMemoryError e )
                     {

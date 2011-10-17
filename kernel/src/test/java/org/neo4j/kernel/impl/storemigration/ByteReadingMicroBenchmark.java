@@ -22,7 +22,6 @@ package org.neo4j.kernel.impl.storemigration;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -40,23 +39,22 @@ import org.neo4j.test.TargetDirectory;
 
 public class ByteReadingMicroBenchmark
 {
+    public static final int NUMBER_OF_RECORDS = 1000 * 1000;
+    public static final int INTEGERS_PER_RECORD = 2;
+    public static final int BYTES_PER_INTEGER = 4;
+    public static final int TOTAL_BYTES = NUMBER_OF_RECORDS * INTEGERS_PER_RECORD * BYTES_PER_INTEGER;
 
-    public static final int NUMBER_OF_INTEGERS = 4 * 1000 * 1000;
     public static final int MILLION = (1000 * 1000);
+
+    TargetDirectory targetDirectory = TargetDirectory.forTest( getClass() );
 
     @Test
     public void shouldReadBytes() throws IOException
     {
-        TargetDirectory target = TargetDirectory.forTest( getClass() );
-        File storeDirectory = target.directory( "store-files", true );
-        File file = new File( storeDirectory, "integers" );
-
-        writeIntegers( file );
-
-        time( new SingleByteBuffer( file ) );
-        time( new PersistenceWindow( file ) );
-        time( new TotallyMappedWindowPool( file ) );
-        time( new BufferedInputStream( file ) );
+        time( new SingleByteBuffer() );
+        time( new PersistenceWindow() );
+        time( new TotallyMappedWindowPool() );
+        time( new BufferedInputStream() );
     }
 
     private static long nanosToMillis( long nanos )
@@ -67,45 +65,62 @@ public class ByteReadingMicroBenchmark
     private void writeIntegers( File integers ) throws IOException
     {
         OutputStream outputStream = new BufferedOutputStream( new FileOutputStream( integers ) );
-        for ( int i = 0; i < NUMBER_OF_INTEGERS; i++ )
+        for ( int i = 0; i < NUMBER_OF_RECORDS; i++ )
         {
-            outputStream.write( 0 );
-            outputStream.write( 0 );
-            outputStream.write( 0 );
-            outputStream.write( 1 );
+            for ( int j = 0; j < INTEGERS_PER_RECORD; j++ )
+            {
+                outputStream.write( 0 );
+                outputStream.write( 0 );
+                outputStream.write( 0 );
+                outputStream.write( 1 );
+            }
         }
         outputStream.close();
     }
 
-    public static void time( Runnable task )
+    public void time( FileProcessor task ) throws IOException
     {
+        String taskName = task.getClass().getSimpleName();
+
+        File storeDirectory = targetDirectory.directory( "store-files", true );
+        File file = new File( storeDirectory, taskName );
+
+        writeIntegers( file );
+
         long startTime = System.nanoTime();
-        task.run();
+        task.run( file );
         long duration = System.nanoTime() - startTime;
-        System.out.printf( "%s took %d%n", task.getClass().getSimpleName(), nanosToMillis( duration ) );
+
+        double throughput = TOTAL_BYTES / ((double) duration / (1000 * 1000 * 1000));
+        System.out.printf( "%s took %dms, throughput %s%n",
+                taskName, nanosToMillis( duration ), formatThroughput( throughput ) );
     }
 
-    private class SingleByteBuffer implements Runnable
+    private static String formatThroughput( double throughput )
     {
-        private File file;
+        int thousand = 1024;
+        int exponent = (int) (Math.log( throughput ) / Math.log( thousand ));
+        char scale = "KMGT".charAt( exponent - 1 );
+        return String.format( "%.2f%sB/s", throughput / Math.pow( thousand, exponent ), scale );
+    }
 
-        public SingleByteBuffer( File file ) throws FileNotFoundException
-        {
-            this.file = file;
-        }
-
-        public void run()
+    private class SingleByteBuffer implements FileProcessor
+    {
+        public void run( File file )
         {
             try
             {
                 FileChannel fileChannel = new RandomAccessFile( file, "r" ).getChannel();
-                MappedByteBuffer byteBuffer = fileChannel.map( FileChannel.MapMode.READ_ONLY, 0, NUMBER_OF_INTEGERS * 4 );
+                MappedByteBuffer byteBuffer = fileChannel.map( FileChannel.MapMode.READ_ONLY, 0, TOTAL_BYTES );
                 int sum = 0;
-                for ( int i = 0; i < NUMBER_OF_INTEGERS; i++ )
+                for ( int i = 0; i < NUMBER_OF_RECORDS; i++ )
                 {
-                    sum += byteBuffer.getInt();
+                    for ( int j = 0; j < INTEGERS_PER_RECORD; j++ )
+                    {
+                        sum += byteBuffer.getInt();
+                    }
                 }
-                if ( sum != NUMBER_OF_INTEGERS )
+                if ( sum != NUMBER_OF_RECORDS * INTEGERS_PER_RECORD )
                 {
                     throw new IllegalStateException( "unexpected sum: " + sum );
                 }
@@ -118,31 +133,28 @@ public class ByteReadingMicroBenchmark
         }
     }
 
-    private class PersistenceWindow implements Runnable
+    private class PersistenceWindow implements FileProcessor
     {
-        private File file;
-
-        public PersistenceWindow( File file ) throws FileNotFoundException
-        {
-            this.file = file;
-        }
-
-        public void run()
+        public void run( File file )
         {
             try
             {
                 FileChannel fileChannel = new RandomAccessFile( file, "r" ).getChannel();
-                PersistenceWindowPool windowPool = new PersistenceWindowPool( file.getName(), 4, fileChannel, MILLION, true, true );
+                PersistenceWindowPool windowPool = new PersistenceWindowPool( file.getName(),
+                        INTEGERS_PER_RECORD * BYTES_PER_INTEGER, fileChannel, MILLION, true, true );
 
                 int sum = 0;
-                for ( int i = 0; i < NUMBER_OF_INTEGERS; i++ )
+                for ( int i = 0; i < NUMBER_OF_RECORDS; i++ )
                 {
                     org.neo4j.kernel.impl.nioneo.store.PersistenceWindow window = windowPool.acquire( i, OperationType.READ );
                     Buffer buffer = window.getOffsettedBuffer( i );
-                    sum += buffer.getInt();
+                    for ( int j = 0; j < INTEGERS_PER_RECORD; j++ )
+                    {
+                        sum += buffer.getInt();
+                    }
                     windowPool.release( window );
                 }
-                if ( sum != NUMBER_OF_INTEGERS )
+                if ( sum != NUMBER_OF_RECORDS * INTEGERS_PER_RECORD )
                 {
                     throw new IllegalStateException( "unexpected sum: " + sum );
                 }
@@ -155,16 +167,9 @@ public class ByteReadingMicroBenchmark
         }
     }
 
-    private class TotallyMappedWindowPool implements Runnable
+    private class TotallyMappedWindowPool implements FileProcessor
     {
-        private File file;
-
-        public TotallyMappedWindowPool( File file ) throws FileNotFoundException
-        {
-            this.file = file;
-        }
-
-        public void run()
+        public void run( File file )
         {
             try
             {
@@ -172,14 +177,17 @@ public class ByteReadingMicroBenchmark
                 WindowPool windowPool = new org.neo4j.kernel.impl.nioneo.store.TotallyMappedWindowPool( file.getName(), 4, fileChannel, MILLION, true, true );
 
                 int sum = 0;
-                for ( int i = 0; i < NUMBER_OF_INTEGERS; i++ )
+                for ( int i = 0; i < NUMBER_OF_RECORDS; i++ )
                 {
                     org.neo4j.kernel.impl.nioneo.store.PersistenceWindow window = windowPool.acquire( i, OperationType.READ );
                     Buffer buffer = window.getOffsettedBuffer( i );
-                    sum += buffer.getInt();
+                    for ( int j = 0; j < INTEGERS_PER_RECORD; j++ )
+                    {
+                        sum += buffer.getInt();
+                    }
                     windowPool.release( window );
                 }
-                if ( sum != NUMBER_OF_INTEGERS )
+                if ( sum != NUMBER_OF_RECORDS * INTEGERS_PER_RECORD )
                 {
                     throw new IllegalStateException( "unexpected sum: " + sum );
                 }
@@ -192,28 +200,24 @@ public class ByteReadingMicroBenchmark
         }
     }
 
-    private class BufferedInputStream implements Runnable
+    private class BufferedInputStream implements FileProcessor
     {
-        private File file;
-
-        public BufferedInputStream( File file ) throws FileNotFoundException
-        {
-            this.file = file;
-        }
-
-        public void run()
+        public void run( File file )
         {
             try
             {
                 java.io.BufferedInputStream inputStream = new java.io.BufferedInputStream( new FileInputStream( file ) );
                 int sum = 0;
-                byte[] bytes = new byte[4];
-                for ( int i = 0; i < NUMBER_OF_INTEGERS; i++ )
+                byte[] bytes = new byte[INTEGERS_PER_RECORD * BYTES_PER_INTEGER];
+                for ( int i = 0; i < NUMBER_OF_RECORDS; i++ )
                 {
                     inputStream.read( bytes );
-                    sum += LegacyStore.readUnsignedInt( bytes, 0 );
+                    for ( int j = 0; j < INTEGERS_PER_RECORD; j++ )
+                    {
+                        sum += LegacyStore.readUnsignedInt( bytes, j * BYTES_PER_INTEGER );
+                    }
                 }
-                if ( sum != NUMBER_OF_INTEGERS )
+                if ( sum != NUMBER_OF_RECORDS * INTEGERS_PER_RECORD )
                 {
                     throw new IllegalStateException( "unexpected sum: " + sum );
                 }
@@ -224,5 +228,11 @@ public class ByteReadingMicroBenchmark
                 throw new RuntimeException( e );
             }
         }
+    }
+
+    interface FileProcessor
+    {
+
+        void run( File file );
     }
 }
