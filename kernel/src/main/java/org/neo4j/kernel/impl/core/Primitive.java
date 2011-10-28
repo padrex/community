@@ -411,6 +411,8 @@ abstract class Primitive
             {
                 property = addProperty( nodeManager, index, value );
             }
+            if ( addMap == null ) System.out.println( "addMap null" );
+            if ( index == null ) System.out.println( "index null" );
             addMap.put( index.getKeyId(), property );
             success = true;
         }

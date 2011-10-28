@@ -53,7 +53,7 @@ public class NeoStore extends AbstractStore
     public static final String TYPE_DESCRIPTOR = "NeoStore";
 
     /*
-     *  5 longs in header (long + in use), time | random | version | txid | store version
+     *  7 longs in header (long + in use), time | random | version | txid | store version | ref node id | graph next prop
      */
     private static final int RECORD_SIZE = 9;
     private static final int DEFAULT_REL_GRAB_SIZE = 100;
@@ -261,16 +261,14 @@ public class NeoStore extends AbstractStore
         /*
          *  created time | random long | backup version | tx id | store version
          */
-        neoStore.nextId();
-        neoStore.nextId();
-        neoStore.nextId();
-        neoStore.nextId();
-        neoStore.nextId();
+        for ( int i = 0; i < 7; i++ ) neoStore.nextId();
         neoStore.setCreationTime( storeId.getCreationTime() );
         neoStore.setRandomNumber( storeId.getRandomId() );
         neoStore.setVersion( 0 );
         neoStore.setLastCommittedTx( 1 );
         neoStore.setStoreVersion( storeId.getStoreVersion() );
+        neoStore.setReferenceNodeId( 0 );
+        neoStore.setGraphNextProp( -1 );
         neoStore.close();
     }
 
@@ -485,7 +483,27 @@ public class NeoStore extends AbstractStore
     {
         setRecord( 4, version );
     }
+    
+    public long getReferenceNodeId()
+    {
+        return getRecord( 5 );
+    }
 
+    public void setReferenceNodeId( long nodeId )
+    {
+        setRecord( 5, nodeId );
+    }
+    
+    public long getGraphNextProp()
+    {
+        return getRecord( 6 );
+    }
+    
+    public void setGraphNextProp( long propId )
+    {
+        setRecord( 6, propId );
+    }
+    
     /**
      * Returns the node store.
      *
@@ -594,6 +612,13 @@ public class NeoStore extends AbstractStore
         relStore.logIdUsage( msgLog );
         relTypeStore.logIdUsage( msgLog );
         propStore.logIdUsage( msgLog );
+    }
+    
+    public NeoStoreRecord asRecord()
+    {
+        NeoStoreRecord result = new NeoStoreRecord();
+        result.setNextProp( getRecord( 6 ) );
+        return result;
     }
 
     public static void logIdUsage( StringLogger logger, Store store )

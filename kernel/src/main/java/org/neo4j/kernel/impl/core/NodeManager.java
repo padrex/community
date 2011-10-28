@@ -94,7 +94,7 @@ public class NodeManager
     private static final int LOCK_STRIPE_COUNT = 32;
     private final ReentrantLock loadLocks[] =
         new ReentrantLock[LOCK_STRIPE_COUNT];
-    private final GraphProperties graphProperties;
+    private GraphProperties graphProperties;
 
     NodeManager( GraphDatabaseService graphDb,
             AdaptiveCacheManager cacheManager, LockManager lockManager,
@@ -727,6 +727,10 @@ public class NodeManager
         {
             container = new RelationshipProxy( resource.getId(), this );
         }
+        else if ( resource instanceof GraphProperties )
+        {
+            container = (GraphProperties) resource;
+        }
         else
         {
             throw new LockException( "Unkown primitivite type: " + resource );
@@ -755,6 +759,10 @@ public class NodeManager
         else if ( resource instanceof RelationshipImpl )
         {
             container = new RelationshipProxy( resource.getId(), this );
+        }
+        else if ( resource instanceof GraphProperties )
+        {
+            container = (GraphProperties) resource;
         }
         else
         {
@@ -1216,7 +1224,11 @@ public class NodeManager
     
     public PropertyContainer getGraphProperties()
     {
-        // TODO initialize somewhere
         return graphProperties;
+    }
+
+    public void removeGraphPropertiesFromCache()
+    {
+        graphProperties = readInitialGraphProperties();
     }
 }
