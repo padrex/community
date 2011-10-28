@@ -94,6 +94,7 @@ public class NodeManager
     private static final int LOCK_STRIPE_COUNT = 32;
     private final ReentrantLock loadLocks[] =
         new ReentrantLock[LOCK_STRIPE_COUNT];
+    private final GraphProperties graphProperties;
 
     NodeManager( GraphDatabaseService graphDb,
             AdaptiveCacheManager cacheManager, LockManager lockManager,
@@ -124,6 +125,7 @@ public class NodeManager
         }
         nodePropertyTrackers = new LinkedList<PropertyTracker<Node>>();
         relationshipPropertyTrackers = new LinkedList<PropertyTracker<Relationship>>();
+        this.graphProperties = readInitialGraphProperties();
     }
 
     public GraphDatabaseService getGraphDbService()
@@ -894,6 +896,21 @@ public class NodeManager
         persistenceManager.nodeRemoveProperty( node.getId(), property );
     }
 
+    PropertyData graphAddProperty( PropertyIndex index, Object value )
+    {
+        return persistenceManager.graphAddProperty( index, value );
+    }
+
+    PropertyData graphChangeProperty( PropertyData property, Object value )
+    {
+        return persistenceManager.graphChangeProperty( property, value );
+    }
+
+    void graphRemoveProperty( PropertyData property )
+    {
+        persistenceManager.graphRemoveProperty( property );
+    }
+    
     ArrayMap<Integer,PropertyData> deleteRelationship( RelationshipImpl rel )
     {
         deletePrimitive( rel );
@@ -1017,6 +1034,11 @@ public class NodeManager
     LockReleaser getLockReleaser()
     {
         return this.lockReleaser;
+    }
+    
+    LockManager getLockManager()
+    {
+        return this.lockManager;
     }
 
     void addRelationshipType( RelationshipTypeData type )
@@ -1178,5 +1200,23 @@ public class NodeManager
             PropertyTracker<Relationship> relationshipPropertyTracker )
     {
         relationshipPropertyTrackers.remove( relationshipPropertyTracker );
+    }
+    
+    PersistenceManager getPersistenceManager()
+    {
+        return persistenceManager;
+    }
+    
+    private GraphProperties readInitialGraphProperties()
+    {
+        // TODO figure out start record
+        long startRecord = 0;
+        return new GraphProperties( this, startRecord );
+    }
+    
+    public PropertyContainer getGraphProperties()
+    {
+        // TODO initialize somewhere
+        return graphProperties;
     }
 }

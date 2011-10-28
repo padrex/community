@@ -237,6 +237,12 @@ class ReadTransaction implements NeoStoreTransaction
     {
         return loadProperties( getPropertyStore(), getNodeStore().getRecord( nodeId ).getNextProp() );
     }
+    
+    @Override
+    public ArrayMap<Integer, PropertyData> loadProperties( long firstPropertyRecord, boolean light )
+    {
+        return loadProperties( getPropertyStore(), firstPropertyRecord );
+    }
 
     // Duplicated code
     public Object propertyGetValueOrNull( PropertyBlock propertyBlock )
