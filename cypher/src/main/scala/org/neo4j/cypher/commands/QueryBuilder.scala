@@ -19,32 +19,40 @@
  */
 package org.neo4j.cypher.commands
 
-class QueryBuilder(startItems: Seq[StartItem]) {
-  var matching: Option[Match] = None
-  var where: Option[Clause] = None
-  var aggregation: Option[Aggregation] = None
-  var orderBy: Option[Sort] = None
-  var skip: Option[Int] = None
-  var limit: Option[Int] = None
-  var namedPaths: Option[NamedPaths] = None
+class QueryBuilder(startItems: Seq[ StartItem ]) {
+  var matching: Option[ Match ] = None
+  var where: Option[ Clause ] = None
+  var aggregation: Option[ Aggregation ] = None
+  var orderBy: Option[ Sort ] = None
+  var skip: Option[ Value ] = None
+  var limit: Option[ Value ] = None
+  var namedPaths: Option[ NamedPaths ] = None
+  var columns: Seq[ ReturnItem ] => List[ String ] = (returnItems) => returnItems.map(_.identifier.name).toList
 
   def matches(patterns: Pattern*): QueryBuilder = store(() => matching = Some(Match(patterns: _*)))
 
   def where(clause: Clause): QueryBuilder = store(() => where = Some(clause))
 
-  def aggregation(aggregationItems: AggregationItem*): QueryBuilder = store(() => aggregation = Some(Aggregation(aggregationItems: _*)))
+  def aggregation(aggregationItems: AggregationItem*): QueryBuilder =
+    store(() => aggregation = Some(Aggregation(aggregationItems: _*)))
 
   def orderBy(sortItems: SortItem*): QueryBuilder = store(() => orderBy = Some(Sort(sortItems: _*)))
 
-  def skip(skipTo: Int): QueryBuilder = store(() => skip = Some(skipTo))
+  def skip(skipTo: Int): QueryBuilder = store(() => skip = Some(Literal(skipTo)))
 
-  def limit(limitTo: Int): QueryBuilder = store(() => limit = Some(limitTo))
+  def skip(skipTo: String): QueryBuilder = store(() => skip = Some(ParameterValue(skipTo)))
 
-  def namedPaths(paths: NamedPath*): QueryBuilder = store(() => namedPaths = Some(NamedPaths(paths:_*)))
+  def limit(limitTo: Int): QueryBuilder = store(() => limit = Some(Literal(limitTo)))
 
-  def slice: Option[Slice] = (skip, limit) match {
+  def limit(limitTo: String): QueryBuilder = store(() => limit = Some(ParameterValue(limitTo)))
+
+  def namedPaths(paths: NamedPath*): QueryBuilder = store(() => namedPaths = Some(NamedPaths(paths: _*)))
+
+  def columns(columnList: String*): QueryBuilder = store(() => columns = (x) => columnList.toList  )
+
+  def slice: Option[ Slice ] = (skip, limit) match {
     case (None, None) => None
-    case (s, l) => Some(Slice(skip, limit))
+    case (s, l)       => Some(Slice(skip, limit))
   }
 
   private def store(f: () => Unit): QueryBuilder = {
@@ -52,5 +60,7 @@ class QueryBuilder(startItems: Seq[StartItem]) {
     this
   }
 
-  def returns(returnItems: ReturnItem*): Query = Query(Return(returnItems: _*), Start(startItems: _*), matching, where, aggregation, orderBy, slice, namedPaths)
+  def returns(returnItems: ReturnItem*): Query =
+    Query(Return(columns(returnItems), returnItems: _*), Start(startItems: _*), matching, where, aggregation,
+          orderBy, slice, namedPaths)
 }

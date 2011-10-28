@@ -17,30 +17,27 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.cypher.pipes
+package org.neo4j.cypher
 
-import org.neo4j.cypher.SymbolTable
-import org.neo4j.cypher.commands.Value
+import org.neo4j.graphdb._
 
-class SlicePipe(source:Pipe, skip:Option[Value], limit:Option[Value]) extends Pipe {
-  val symbols: SymbolTable = source.symbols
+object CuteGraphDatabaseService {
+  implicit def gds2cuteGds(inner: GraphDatabaseService) = new CuteGraphDatabaseService(inner)
+}
 
-  //TODO: Make this nicer. I'm sure it's expensive and silly.
-  def foreach[U](f: (Map[String, Any]) => U) {
-    val first: Map[String, Any] = source.head
-
-    def asInt(v:Value)=v(first).asInstanceOf[Int]
-
-    val slicedResult = (skip, limit) match {
-      case (None, None) => source
-      case (Some(x), None) => source.drop(asInt(x))
-      case (None, Some(x)) => source.take(asInt(x))
-      case (Some(startAt), Some(count)) => {
-        val start = asInt(startAt)
-        source.slice(start, start + asInt(count))
-      }
+class CuteGraphDatabaseService(inner: GraphDatabaseService) {
+  def inTx[U](f: () => U): U = {
+    val tx = inner.beginTx()
+    try {
+      val x = f()
+      tx.success()
+      x
+    } finally {
+      tx.finish()
     }
-
-    slicedResult.foreach(f)
   }
 }
+
+
+
+
