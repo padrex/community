@@ -1871,4 +1871,32 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         }
         return true;
     }
+
+//    @Override
+//    public PropertyData graphAddProperty( PropertyIndex index, Object value )
+//    {
+//        // TODO Auto-generated method stub
+//        return null;
+//    }
+//
+//    @Override
+//    public PropertyData graphChangeProperty( PropertyData index, Object value )
+//    {
+//        // TODO Auto-generated method stub
+//        return null;
+//    }
+//
+//    @Override
+//    public void graphRemoveProperty( PropertyData index )
+//    {
+//        // TODO Auto-generated method stub
+//        
+//    }
+//
+//    @Override
+//    public ArrayMap<Integer, PropertyData> loadProperties( long firstPropertyRecord, boolean light )
+//    {
+//        // TODO Auto-generated method stub
+//        return null;
+//    }
 }

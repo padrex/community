@@ -436,4 +436,22 @@ class ReadTransaction implements NeoStoreTransaction
     {
         return getKeyIdForProperty( property, getPropertyStore() );
     }
+
+    @Override
+    public PropertyData graphAddProperty( PropertyIndex index, Object value )
+    {
+        throw readOnlyException();
+    }
+
+    @Override
+    public PropertyData graphChangeProperty( PropertyData index, Object value )
+    {
+        throw readOnlyException();
+    }
+
+    @Override
+    public void graphRemoveProperty( PropertyData index )
+    {
+        throw readOnlyException();
+    }
 }
