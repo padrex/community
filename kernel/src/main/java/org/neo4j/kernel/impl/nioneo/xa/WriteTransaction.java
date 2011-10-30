@@ -1867,14 +1867,14 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     {
         removeProperty( getOrLoadNeoStoreRecord(), propertyData, RecordAdded.GRAPH );
     }
-
-    @Override
-    public ArrayMap<Integer, PropertyData> loadProperties( long firstPropertyRecord, boolean light )
-    {
-        // TODO Auto-generated method stub
-        return null;
-    }
     
+    @Override
+    public ArrayMap<Integer, PropertyData> graphLoadProperties( boolean light )
+    {
+        NeoStoreRecord record = getOrLoadNeoStoreRecord();
+        return ReadTransaction.loadProperties( getPropertyStore(), record.getNextProp() );
+    }
+
     private static enum RecordAdded
     {
         NODE

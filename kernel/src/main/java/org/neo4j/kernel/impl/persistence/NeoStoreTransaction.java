@@ -207,6 +207,16 @@ public interface NeoStoreTransaction
     public void graphRemoveProperty( PropertyData index );
     
     /**
+     * Loads the complete property chain for the graph and returns it as a
+     * map from property index id to property data.
+     *
+     * @param light If the properties should be loaded light or not.
+     * @return The properties loaded, as a map from property index id to
+     *         property data.
+     */
+    public ArrayMap<Integer,PropertyData> graphLoadProperties( boolean light );
+    
+    /**
      * Loads the value object for the given property index record id if the
      * record is light.
      *
@@ -331,6 +341,4 @@ public interface NeoStoreTransaction
      *         in the record.
      */
     public int getKeyIdForProperty( PropertyData property );
-
-    public ArrayMap<Integer, PropertyData> loadProperties( long firstPropertyRecord, boolean light );
 }

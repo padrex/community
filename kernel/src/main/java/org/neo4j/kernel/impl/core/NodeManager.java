@@ -670,6 +670,11 @@ public class NodeManager
     {
          relCache.putAll( map );
     }
+    
+    ArrayMap<Integer, PropertyData> loadGraphProperties( boolean light )
+    {
+        return persistenceManager.graphLoadProperties( light );
+    }
 
     ArrayMap<Integer, PropertyData> loadProperties( NodeImpl node, boolean light )
     {
@@ -1222,7 +1227,7 @@ public class NodeManager
         return new GraphProperties( this, startRecord );
     }
     
-    public PropertyContainer getGraphProperties()
+    public GraphProperties getGraphProperties()
     {
         return graphProperties;
     }

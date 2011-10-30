@@ -54,29 +54,25 @@ public class GraphProperties extends Primitive implements PropertyContainer
     @Override
     protected PropertyData changeProperty( NodeManager nodeManager, PropertyData property, Object value )
     {
-        // TODO Auto-generated method stub
-        return null;
+        return nodeManager.graphChangeProperty( property, value );
     }
 
     @Override
     protected PropertyData addProperty( NodeManager nodeManager, PropertyIndex index, Object value )
     {
-        // TODO Auto-generated method stub
-        return null;
+        return nodeManager.graphAddProperty( index, value );
     }
 
     @Override
     protected void removeProperty( NodeManager nodeManager, PropertyData property )
     {
-        // TODO Auto-generated method stub
-        
+        nodeManager.graphRemoveProperty( property );
     }
 
     @Override
     protected ArrayMap<Integer, PropertyData> loadProperties( NodeManager nodeManager, boolean light )
     {
-        // TODO Auto-generated method stub
-        return null;
+        return nodeManager.loadGraphProperties( light );
     }
 
     @Override
