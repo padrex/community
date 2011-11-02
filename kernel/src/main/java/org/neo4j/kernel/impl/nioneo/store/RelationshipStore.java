@@ -36,10 +36,10 @@ public class RelationshipStore extends AbstractStore implements Store, RecordSto
     public static final String TYPE_DESCRIPTOR = "RelationshipStore";
 
     // record header size
-    // directed|in_use(byte)+first_node(int)+second_node(int)+rel_type(int)+
+    // in_use(byte)+first_node(int)+second_node(int)+rel_type(int)+
     // first_prev_rel_id(int)+first_next_rel_id+second_prev_rel_id(int)+
     // second_next_rel_id+next_prop_id(int)
-    public static final int RECORD_SIZE = 33;
+    public static final int RECORD_SIZE = 34;
 
     /**
      * See {@link AbstractStore#AbstractStore(String, Map)}
@@ -221,11 +221,15 @@ public class RelationshipStore extends AbstractStore implements Store, RecordSto
             // [    ,    ][  xx,x   ][    ,    ][    ,    ] second prev rel high order bits, 0x380000
             // [    ,    ][    , xxx][    ,    ][    ,    ] second next rel high order bits, 0x70000
             // [    ,    ][    ,    ][xxxx,xxxx][xxxx,xxxx] type
-            int typeInt = (int)(record.getType() | secondNodeMod | firstPrevRelMod | firstNextRelMod | secondPrevRelMod | secondNextRelMod);
+            int typeInt = (int)(secondNodeMod | firstPrevRelMod | firstNextRelMod | secondPrevRelMod | secondNextRelMod | record.getType());
+            
+            // [    ,   x] 1: first in first chain, 0: not first in first chain
+            // [    ,  x ] 1: first in second chain, 0: not first in second chain
+            byte extraByte = (byte) ((record.isFirstInFirstChain() ? (byte)1 : (byte)0) | (record.isFirstInSecondChain() ? (byte)2 : (byte)0));
 
             buffer.put( (byte)inUseUnsignedByte ).putInt( (int) firstNode ).putInt( (int) secondNode )
                 .putInt( typeInt ).putInt( (int) firstPrevRel ).putInt( (int) firstNextRel )
-                .putInt( (int) secondPrevRel ).putInt( (int) secondNextRel ).putInt( (int) nextProp );
+                .putInt( (int) secondPrevRel ).putInt( (int) secondNextRel ).putInt( (int) nextProp ).put( extraByte );
         }
         else
         {
@@ -278,27 +282,36 @@ public class RelationshipStore extends AbstractStore implements Store, RecordSto
             longFromIntAndMod( firstNode, firstNodeMod ),
             longFromIntAndMod( secondNode, secondNodeMod ), type );
         record.setInUse( inUse );
+        
+        record.setFirstInFirstChain( (typeInt & 0x80000000) != 0 );
 
         long firstPrevRel = buffer.getUnsignedInt();
-        long firstPrevRelMod = (typeInt & 0xE000000L) << 7;
-        record.setFirstPrevRel( longFromIntAndMod( firstPrevRel, firstPrevRelMod ) );
-
         long firstNextRel = buffer.getUnsignedInt();
+        long secondPrevRel = buffer.getUnsignedInt();
+        long secondNextRel = buffer.getUnsignedInt();
+        long nextProp = buffer.getUnsignedInt();
+
+        // [    ,   x] 1: first in first chain, 0: not first in first chain
+        // [    ,  x ] 1: first in second chain, 0: not first in second chain
+        byte extraByte = buffer.get();
+        record.setFirstInFirstChain( (extraByte & 0x1) > 0 );
+        record.setFirstInSecondChain( (extraByte & 0x2) > 0 );
+        
+        long firstPrevRelMod = (typeInt & 0xE000000L) << 7;
+        record.setFirstPrevRel( record.isFirstInFirstChain() ? Record.NO_PREV_RELATIONSHIP.intValue() : longFromIntAndMod( firstPrevRel, firstPrevRelMod ) );
+
         long firstNextRelMod = (typeInt & 0x1C00000L) << 10;
         record.setFirstNextRel( longFromIntAndMod( firstNextRel, firstNextRelMod ) );
 
-        long secondPrevRel = buffer.getUnsignedInt();
         long secondPrevRelMod = (typeInt & 0x380000L) << 13;
-        record.setSecondPrevRel( longFromIntAndMod( secondPrevRel, secondPrevRelMod ) );
+        record.setSecondPrevRel( record.isFirstInSecondChain() ? Record.NO_PREV_RELATIONSHIP.intValue() : longFromIntAndMod( secondPrevRel, secondPrevRelMod ) );
 
-        long secondNextRel = buffer.getUnsignedInt();
         long secondNextRelMod = (typeInt & 0x70000L) << 16;
         record.setSecondNextRel( longFromIntAndMod( secondNextRel, secondNextRelMod ) );
 
-        long nextProp = buffer.getUnsignedInt();
         long nextPropMod = (inUseByte & 0xF0L) << 28;
-
         record.setNextProp( longFromIntAndMod( nextProp, nextPropMod ) );
+        
         return record;
     }
 

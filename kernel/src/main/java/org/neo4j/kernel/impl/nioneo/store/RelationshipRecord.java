@@ -28,6 +28,8 @@ public class RelationshipRecord extends PrimitiveRecord
     private long firstNextRel = Record.NO_NEXT_RELATIONSHIP.intValue();
     private long secondPrevRel = Record.NO_PREV_RELATIONSHIP.intValue();
     private long secondNextRel = Record.NO_NEXT_RELATIONSHIP.intValue();
+    private boolean firstInFirstChain;
+    private boolean firstInSecondChain;
 
     public RelationshipRecord( long id, long firstNode, long secondNode, int type )
     {
@@ -50,6 +52,26 @@ public class RelationshipRecord extends PrimitiveRecord
     public int getType()
     {
         return type;
+    }
+    
+    public boolean isFirstInFirstChain()
+    {
+        return firstInFirstChain;
+    }
+    
+    public void setFirstInFirstChain( boolean firstInFirstChain )
+    {
+        this.firstInFirstChain = firstInFirstChain;
+    }
+    
+    public boolean isFirstInSecondChain()
+    {
+        return firstInSecondChain;
+    }
+    
+    public void setFirstInSecondChain( boolean firstInSecondChain )
+    {
+        this.firstInSecondChain = firstInSecondChain;
     }
 
     public long getFirstPrevRel()

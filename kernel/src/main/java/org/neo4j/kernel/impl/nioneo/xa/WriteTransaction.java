@@ -738,9 +738,11 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
 
     private void disconnectRelationship( RelationshipRecord rel )
     {
-        // update first node prev
-        if ( rel.getFirstPrevRel() != Record.NO_NEXT_RELATIONSHIP.intValue() )
-        {
+        // update first node prev rel
+        //                       ----------
+        // [prevrel.firstNext]--/   [rel]  \-->[nextrel]
+        if ( rel.getFirstPrevRel() != Record.NO_NEXT_RELATIONSHIP.intValue() && !rel.isFirstInFirstChain() )
+        {   // This rel isn't the first in the first chain
             Relationship lockableRel = new LockableRelationship(
                 rel.getFirstPrevRel() );
             getWriteLock( lockableRel );
@@ -753,25 +755,27 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 addRelationshipRecord( prevRel );
             }
             boolean changed = false;
+            long next = rel.getFirstNextRel();
             if ( prevRel.getFirstNode() == rel.getFirstNode() )
             {
-                prevRel.setFirstNextRel( rel.getFirstNextRel() );
+                prevRel.setFirstNextRel( next );
                 changed = true;
             }
             if ( prevRel.getSecondNode() == rel.getFirstNode() )
             {
-                prevRel.setSecondNextRel( rel.getFirstNextRel() );
+                prevRel.setSecondNextRel( next );
                 changed = true;
             }
             if ( !changed )
             {
-                throw new InvalidRecordException(
-                    prevRel + " don't match " + rel );
+                throw new InvalidRecordException( prevRel + " don't match " + rel );
             }
         }
-        // update first node next
+        // update first node next rel
+        //              ----------
+        // [prevrel]<--/   [rel]  \--[nextrel.firstPrev]
         if ( rel.getFirstNextRel() != Record.NO_NEXT_RELATIONSHIP.intValue() )
-        {
+        {   // This rel isn't the last in the first chain
             Relationship lockableRel = new LockableRelationship(
                 rel.getFirstNextRel() );
             getWriteLock( lockableRel );
@@ -784,25 +788,31 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 addRelationshipRecord( nextRel );
             }
             boolean changed = false;
+            long prev = rel.getFirstPrevRel();
+            boolean firstInChain = rel.isFirstInFirstChain();
+            if ( firstInChain ) prev--; // prev is rel count
             if ( nextRel.getFirstNode() == rel.getFirstNode() )
             {
-                nextRel.setFirstPrevRel( rel.getFirstPrevRel() );
+                nextRel.setFirstPrevRel( prev );
+                nextRel.setFirstInFirstChain( firstInChain );
                 changed = true;
             }
             if ( nextRel.getSecondNode() == rel.getFirstNode() )
             {
-                nextRel.setSecondPrevRel( rel.getFirstPrevRel() );
+                nextRel.setSecondPrevRel( prev );
+                nextRel.setFirstInSecondChain( firstInChain );
                 changed = true;
             }
             if ( !changed )
             {
-                throw new InvalidRecordException( nextRel + " don't match "
-                    + rel );
+                throw new InvalidRecordException( nextRel + " don't match " + rel );
             }
         }
-        // update second node prev
-        if ( rel.getSecondPrevRel() != Record.NO_NEXT_RELATIONSHIP.intValue() )
-        {
+        // update second node prev rel
+        //                        ----------
+        // [prevrel.secondNext]--/   [rel]  \-->[nextrel]
+        if ( rel.getSecondPrevRel() != Record.NO_NEXT_RELATIONSHIP.intValue() && !rel.isFirstInSecondChain() )
+        {   // This rel isn't the first in the second chain
             Relationship lockableRel = new LockableRelationship(
                 rel.getSecondPrevRel() );
             getWriteLock( lockableRel );
@@ -827,13 +837,14 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             }
             if ( !changed )
             {
-                throw new InvalidRecordException( prevRel + " don't match " +
-                    rel );
+                throw new InvalidRecordException( prevRel + " don't match " + rel );
             }
         }
-        // update second node next
+        // update second node next rel
+        //              ----------
+        // [prevrel]<--/   [rel]  \--[nextrel.secondPrev]
         if ( rel.getSecondNextRel() != Record.NO_NEXT_RELATIONSHIP.intValue() )
-        {
+        {   // This rel isn't the last in the second chain
             Relationship lockableRel = new LockableRelationship(
                 rel.getSecondNextRel() );
             getWriteLock( lockableRel );
@@ -846,20 +857,24 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 addRelationshipRecord( nextRel );
             }
             boolean changed = false;
+            long prev = rel.getSecondPrevRel();
+            boolean firstInChain = rel.isFirstInSecondChain();
+            if ( firstInChain ) prev--; // prev is rel count
             if ( nextRel.getFirstNode() == rel.getSecondNode() )
             {
-                nextRel.setFirstPrevRel( rel.getSecondPrevRel() );
+                nextRel.setFirstPrevRel( prev );
+                nextRel.setFirstInFirstChain( firstInChain );
                 changed = true;
             }
             if ( nextRel.getSecondNode() == rel.getSecondNode() )
             {
-                nextRel.setSecondPrevRel( rel.getSecondPrevRel() );
+                nextRel.setSecondPrevRel( prev );
+                nextRel.setFirstInSecondChain( firstInChain );
                 changed = true;
             }
             if ( !changed )
             {
-                throw new InvalidRecordException( nextRel + " don't match " +
-                    rel );
+                throw new InvalidRecordException( nextRel + " don't match " + rel );
             }
         }
     }
@@ -1426,6 +1441,9 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         connect( secondNode, rel );
         firstNode.setNextRel( rel.getId() );
         secondNode.setNextRel( rel.getId() );
+        
+        // TODO update count (in the first and second prev record)
+        
     }
 
     private void connect( NodeRecord node, RelationshipRecord rel )
@@ -1443,12 +1461,20 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             boolean changed = false;
             if ( nextRel.getFirstNode() == node.getId() )
             {
+                long previousPrevRel = nextRel.getFirstPrevRel();
                 nextRel.setFirstPrevRel( rel.getId() );
+                nextRel.setFirstInFirstChain( false );
+                rel.setFirstInFirstChain( true );
+                rel.setFirstPrevRel( previousPrevRel+1 ); // the relationship count
                 changed = true;
             }
             if ( nextRel.getSecondNode() == node.getId() )
             {
+                long previousPrevRel = nextRel.getSecondPrevRel();
                 nextRel.setSecondPrevRel( rel.getId() );
+                nextRel.setFirstInSecondChain( false );
+                rel.setFirstInSecondChain( true );
+                rel.setSecondPrevRel( previousPrevRel+1 );
                 changed = true;
             }
             if ( !changed )
