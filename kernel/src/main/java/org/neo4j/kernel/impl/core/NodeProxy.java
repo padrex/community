@@ -197,6 +197,12 @@ class NodeProxy implements Node
         return nm.getNodeForProxy( nodeId ).createRelationshipTo( nm, otherNode,
             type );
     }
+    
+    @Override
+    public int getRelationshipCount()
+    {
+        return nm.getNodeForProxy( nodeId ).getRelationshipCount( nm );
+    }
 
     /* Tentative expansion API
     public Expansion<Relationship> expandAll()

@@ -788,19 +788,16 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 addRelationshipRecord( nextRel );
             }
             boolean changed = false;
-            long prev = rel.getFirstPrevRel();
-            boolean firstInChain = rel.isFirstInFirstChain();
-            if ( firstInChain ) prev--; // prev is rel count
             if ( nextRel.getFirstNode() == rel.getFirstNode() )
             {
-                nextRel.setFirstPrevRel( prev );
-                nextRel.setFirstInFirstChain( firstInChain );
+                nextRel.setFirstPrevRel( rel.getFirstPrevRel() );
+                nextRel.setFirstInFirstChain( rel.isFirstInFirstChain() );
                 changed = true;
             }
             if ( nextRel.getSecondNode() == rel.getFirstNode() )
             {
-                nextRel.setSecondPrevRel( prev );
-                nextRel.setFirstInSecondChain( firstInChain );
+                nextRel.setSecondPrevRel( rel.getFirstPrevRel() );
+                nextRel.setFirstInSecondChain( rel.isFirstInFirstChain() );
                 changed = true;
             }
             if ( !changed )
@@ -857,19 +854,16 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 addRelationshipRecord( nextRel );
             }
             boolean changed = false;
-            long prev = rel.getSecondPrevRel();
-            boolean firstInChain = rel.isFirstInSecondChain();
-            if ( firstInChain ) prev--; // prev is rel count
             if ( nextRel.getFirstNode() == rel.getSecondNode() )
             {
-                nextRel.setFirstPrevRel( prev );
-                nextRel.setFirstInFirstChain( firstInChain );
+                nextRel.setFirstPrevRel( rel.getSecondPrevRel() );
+                nextRel.setFirstInFirstChain( rel.isFirstInSecondChain() );
                 changed = true;
             }
             if ( nextRel.getSecondNode() == rel.getSecondNode() )
             {
-                nextRel.setSecondPrevRel( prev );
-                nextRel.setFirstInSecondChain( firstInChain );
+                nextRel.setSecondPrevRel( rel.getSecondPrevRel() );
+                nextRel.setFirstInSecondChain( rel.isFirstInSecondChain() );
                 changed = true;
             }
             if ( !changed )
@@ -903,25 +897,57 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
 
     private void updateNodes( RelationshipRecord rel )
     {
-        if ( rel.getFirstPrevRel() == Record.NO_PREV_RELATIONSHIP.intValue() )
+        NodeRecord firstNode = getNodeRecord( rel.getFirstNode() );
+        boolean lookedUpFirstNode = false;
+        if ( firstNode == null )
         {
-            NodeRecord firstNode = getNodeRecord( rel.getFirstNode() );
-            if ( firstNode == null )
-            {
-                firstNode = getNodeStore().getRecord( rel.getFirstNode() );
-                addNodeRecord( firstNode );
-            }
+            firstNode = getNodeStore().getRecord( rel.getFirstNode() );
+            lookedUpFirstNode = true;
+        }
+        NodeRecord secondNode = getNodeRecord( rel.getSecondNode() );
+        boolean lookedUpSecondNode = false;
+        if ( secondNode == null )
+        {
+            secondNode = getNodeStore().getRecord( rel.getSecondNode() );
+            lookedUpSecondNode = true;
+        }
+        
+        // Update nodes nextRel
+        if ( rel.isFirstInFirstChain() )
+        {
+            if ( lookedUpFirstNode ) addNodeRecord( firstNode );
             firstNode.setNextRel( rel.getFirstNextRel() );
         }
-        if ( rel.getSecondPrevRel() == Record.NO_PREV_RELATIONSHIP.intValue() )
+        if ( rel.isFirstInSecondChain() )
         {
-            NodeRecord secondNode = getNodeRecord( rel.getSecondNode() );
-            if ( secondNode == null )
-            {
-                secondNode = getNodeStore().getRecord( rel.getSecondNode() );
-                addNodeRecord( secondNode );
-            }
+            if ( lookedUpSecondNode ) addNodeRecord( secondNode );
             secondNode.setNextRel( rel.getSecondNextRel() );
+        }
+        
+        updateRelCount( firstNode, rel );
+        updateRelCount( secondNode, rel );
+    }
+
+    private void updateRelCount( NodeRecord node, RelationshipRecord rel )
+    {
+        if ( node.getNextRel() != Record.NO_PREV_RELATIONSHIP.intValue() )
+        {
+            RelationshipRecord firstRel = getRelationshipRecord( node.getNextRel() );
+            if ( firstRel == null )
+            {
+                firstRel = getRelationshipStore().getRecord( node.getNextRel() );
+                addRelationshipRecord( firstRel );
+            }
+            if ( node.getId() == firstRel.getFirstNode() )
+            {
+                firstRel.setFirstPrevRel( rel.isFirstInFirstChain() ? rel.getFirstPrevRel()-1 : firstRel.getFirstPrevRel()-1 );
+                firstRel.setFirstInFirstChain( true );
+            }
+            if ( node.getId() == firstRel.getSecondNode() )
+            {
+                firstRel.setSecondPrevRel( rel.isFirstInSecondChain() ? rel.getSecondPrevRel()-1 : firstRel.getSecondPrevRel()-1 );
+                firstRel.setFirstInSecondChain( true );
+            }
         }
     }
 
@@ -1482,6 +1508,19 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 throw new InvalidRecordException( node + " dont match " + nextRel );
             }
         }
+        else
+        {
+            if ( node.getId() == rel.getFirstNode() )
+            {
+                rel.setFirstInFirstChain( true );
+                rel.setFirstPrevRel( 1 );
+            }
+            if ( node.getId() == rel.getSecondNode() )
+            {
+                rel.setFirstInSecondChain( true );
+                rel.setSecondPrevRel( 1 );
+            }
+        }
     }
 
     @Override
@@ -1896,5 +1935,17 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             previous = current;
         }
         return true;
+    }
+    
+    @Override
+    public int getRelationshipCount( long id )
+    {
+        NodeRecord node = getNodeRecord( id );
+        if ( node == null ) node = getNodeStore().getRecord( id );
+        long nextRel = node.getNextRel();
+        if ( nextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ) return 0;
+        RelationshipRecord rel = getRelationshipRecord( nextRel );
+        if ( rel == null ) rel = getRelationshipStore().getRecord( nextRel );
+        return (int) (id == rel.getFirstNode() ? rel.getFirstPrevRel() : rel.getSecondPrevRel());
     }
 }

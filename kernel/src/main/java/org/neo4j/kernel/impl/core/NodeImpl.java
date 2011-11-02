@@ -652,4 +652,9 @@ class NodeImpl extends Primitive
     {
         return relationships;
     }
+
+    public int getRelationshipCount( NodeManager nm )
+    {
+        return nm.getRelationshipCount( this );
+    }
 }

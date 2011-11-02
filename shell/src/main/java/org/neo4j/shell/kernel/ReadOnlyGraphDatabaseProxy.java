@@ -233,6 +233,12 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, IndexMa
         {
             return new ReadOnlyRelationshipProxy( actual.getSingleRelationship( type, dir ) );
         }
+        
+        @Override
+        public int getRelationshipCount()
+        {
+            return actual.getRelationshipCount();
+        }
 
         public boolean hasRelationship()
         {

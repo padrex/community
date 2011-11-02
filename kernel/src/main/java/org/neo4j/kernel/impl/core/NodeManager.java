@@ -1179,4 +1179,9 @@ public class NodeManager
     {
         relationshipPropertyTrackers.remove( relationshipPropertyTracker );
     }
+
+    public int getRelationshipCount( NodeImpl nodeImpl )
+    {
+        return persistenceManager.getRelationshipCount( nodeImpl.getId() );
+    }
 }

@@ -280,6 +280,12 @@ class BatchGraphDatabaseImpl implements GraphDatabaseService
             }
             return null;
         }
+        
+        @Override
+        public int getRelationshipCount()
+        {
+            throw new UnsupportedOperationException();
+        }
 
         public boolean hasRelationship()
         {

@@ -481,7 +481,7 @@ public abstract class Command extends XaCommand
                     .putLong( record.getFirstNextRel() ).putLong(
                         record.getSecondPrevRel() ).putLong(
                         record.getSecondNextRel() ).putLong(
-                        record.getNextProp() );
+                        record.getNextProp() ).put( (byte) ((record.isFirstInFirstChain()?1:0) | (record.isFirstInSecondChain()?2:0)) );
             }
         }
 
@@ -513,7 +513,7 @@ public abstract class Command extends XaCommand
             if ( inUse )
             {
                 buffer.clear();
-                buffer.limit( 60 );
+                buffer.limit( 61 );
                 if ( byteChannel.read( buffer ) != buffer.limit() )
                 {
                     return null;
@@ -527,6 +527,9 @@ public abstract class Command extends XaCommand
                 record.setSecondPrevRel( buffer.getLong() );
                 record.setSecondNextRel( buffer.getLong() );
                 record.setNextProp( buffer.getLong() );
+                byte extraByte = buffer.get();
+                record.setFirstInFirstChain( (extraByte&0x1) > 0 );
+                record.setFirstInSecondChain( (extraByte&0x2) > 0 );
             }
             else
             {

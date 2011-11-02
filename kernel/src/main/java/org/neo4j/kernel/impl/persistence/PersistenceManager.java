@@ -399,4 +399,9 @@ public class PersistenceManager
     {
         return getReadOnlyResourceIfPossible().getKeyIdForProperty( property );
     }
+
+    public int getRelationshipCount( long id )
+    {
+        return getReadOnlyResourceIfPossible().getRelationshipCount( id );
+    }
 }

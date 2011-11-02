@@ -303,4 +303,6 @@ public interface NeoStoreTransaction
      *         in the record.
      */
     public int getKeyIdForProperty( PropertyData property );
+
+    public int getRelationshipCount( long id );
 }

@@ -258,11 +258,11 @@ public interface Node extends PropertyContainer
     public Relationship getSingleRelationship( RelationshipType type,
             Direction dir );
     
-//    /**
-//     * Returns the number of relationships for this node in O(1) time.
-//     * @return the number of relationships for this node in O(1) time.
-//     */
-//    public int getRelationshipCount();
+    /**
+     * Returns the number of relationships for this node in O(1) time.
+     * @return the number of relationships for this node in O(1) time.
+     */
+    public int getRelationshipCount();
 
     /**
      * Creates a relationship between this node and another node. The

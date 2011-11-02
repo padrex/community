@@ -32,6 +32,7 @@ import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.impl.core.PropertyIndex;
 import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
+import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
 import org.neo4j.kernel.impl.nioneo.store.NodeStore;
 import org.neo4j.kernel.impl.nioneo.store.PropertyBlock;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
@@ -429,5 +430,15 @@ class ReadTransaction implements NeoStoreTransaction
     public int getKeyIdForProperty( PropertyData property )
     {
         return getKeyIdForProperty( property, getPropertyStore() );
+    }
+    
+    @Override
+    public int getRelationshipCount( long id )
+    {
+        NodeRecord node = getNodeStore().getRecord( id );
+        long nextRel = node.getNextRel();
+        if ( nextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ) return 0;
+        RelationshipRecord rel = getRelationshipStore().getRecord( nextRel );
+        return (int) (id == rel.getFirstNode() ? rel.getFirstPrevRel() : rel.getSecondPrevRel());
     }
 }

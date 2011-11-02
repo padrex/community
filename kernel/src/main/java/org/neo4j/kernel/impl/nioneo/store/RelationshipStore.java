@@ -298,13 +298,13 @@ public class RelationshipStore extends AbstractStore implements Store, RecordSto
         record.setFirstInSecondChain( (extraByte & 0x2) > 0 );
         
         long firstPrevRelMod = (typeInt & 0xE000000L) << 7;
-        record.setFirstPrevRel( record.isFirstInFirstChain() ? Record.NO_PREV_RELATIONSHIP.intValue() : longFromIntAndMod( firstPrevRel, firstPrevRelMod ) );
+        record.setFirstPrevRel( /*record.isFirstInFirstChain() ? Record.NO_PREV_RELATIONSHIP.intValue() : */longFromIntAndMod( firstPrevRel, firstPrevRelMod ) );
 
         long firstNextRelMod = (typeInt & 0x1C00000L) << 10;
         record.setFirstNextRel( longFromIntAndMod( firstNextRel, firstNextRelMod ) );
 
         long secondPrevRelMod = (typeInt & 0x380000L) << 13;
-        record.setSecondPrevRel( record.isFirstInSecondChain() ? Record.NO_PREV_RELATIONSHIP.intValue() : longFromIntAndMod( secondPrevRel, secondPrevRelMod ) );
+        record.setSecondPrevRel( /*record.isFirstInSecondChain() ? Record.NO_PREV_RELATIONSHIP.intValue() : */longFromIntAndMod( secondPrevRel, secondPrevRelMod ) );
 
         long secondNextRelMod = (typeInt & 0x70000L) << 16;
         record.setSecondNextRel( longFromIntAndMod( secondNextRel, secondNextRelMod ) );
