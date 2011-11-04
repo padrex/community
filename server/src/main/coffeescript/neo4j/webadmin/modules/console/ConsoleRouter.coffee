@@ -21,40 +21,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 define(
   ['./models/Console'
    './models/CypherConsole'
-   './models/HttpConsole'
    './views/CypherConsoleView'
-   './views/GremlinConsoleView'
-   './views/HttpConsoleView'
    'ribcage/Router'
    'lib/backbone'], 
-  (Console, CypherConsole, HttpConsole, CypherConsoleView, GremlinConsoleView, HttpConsoleView, Router) ->
+  (Console, CypherConsole, CypherConsoleView, Router) ->
   
     class ConsoleRouter extends Router
       routes : 
-        "/console/" : "console"
-        "/console/:type" : "console"
+        "" : "console"
 
-      consoleType : "gremlin"
+      consoleType : "cypher"
 
       init : (appState) =>
         @appState = appState
-        @gremlinState = new Console(server:@appState.get("server"), lang:"gremlin")
         @cypherState = new CypherConsole(server:@appState.get("server"), lang:"cypher")
-        @httpState = new HttpConsole(server:@appState.get("server"), lang:"http")
       
         @views = 
-          gremlin : new GremlinConsoleView
-            appState : @appState
-            consoleState : @gremlinState
-            lang: "gremlin"
           cypher : new CypherConsoleView
             appState : @appState
             consoleState : @cypherState
             lang: "cypher"
-          http : new HttpConsoleView
-            appState : @appState
-            consoleState : @httpState
-            lang: "http"
           
       console : (type=false) =>
         @saveLocation()

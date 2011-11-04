@@ -22,29 +22,21 @@ require(
   ["lib/jquery"
    "lib/neo4js"
    "lib/backbone"
-   "neo4j/webadmin/modules/dashboard/DashboardRouter"
    "neo4j/webadmin/modules/databrowser/DataBrowserRouter"
    "neo4j/webadmin/modules/console/ConsoleRouter"
-   "neo4j/webadmin/modules/serverinfo/ServerInfoRouter"
-   "neo4j/webadmin/modules/indexmanager/IndexManagerRouter"
    "neo4j/webadmin/modules/baseui/BaseUI"
    "neo4j/webadmin/modules/moreinfo/MoreInfo"
-   "neo4j/webadmin/modules/splash/SplashScreen"
    "neo4j/webadmin/modules/loading/GlobalLoadingIndicator"
    "neo4j/webadmin/modules/connectionmonitor/ConnectionMonitor"
    "neo4j/webadmin/Bootstrapper"]
-  (a,b,c,DashboardRouter, DataBrowserRouter, ConsoleRouter, ServerInfoRouter, IndexManagerRouter, BaseUI, MoreInfo, SplashScreen, GlobalLoadingIndicator, ConnectionMonitor, Bootstrapper) ->
+  (a,b,c, DataBrowserRouter, ConsoleRouter, BaseUI, MoreInfo, GlobalLoadingIndicator, ConnectionMonitor, Bootstrapper) ->
 
     modules = [
         new BaseUI
-        new DashboardRouter
         new DataBrowserRouter
         new ConsoleRouter
-        new IndexManagerRouter
-        new ServerInfoRouter
 
         new ConnectionMonitor
-        new SplashScreen
         new GlobalLoadingIndicator
         new MoreInfo
     ]
