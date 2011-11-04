@@ -9,7 +9,7 @@ define(
       LABEL_PROPERTIES_DEFAULT : ['name']
       
       VIZ_PROFILES_KEY : 'databrowser.visualization.profiles'
-      VIZ_PROFILES_DEFAULT : [{ id:0, name:"Default profile", builtin:true }]
+      VIZ_PROFILES_DEFAULT : [{"id":0,"name":"Default profile","builtin":true,"styleRules":[]},{"name":"Cineasts","styleRules":[{"target":"node","style":{"type":"node","shape":"box","shapeColor":"#000000","labelFont":"monospace","labelSize":10,"labelColor":"#eeeeee","labelPattern":"User: {prop.name}"},"order":null,"id":3,"filters":[{"method":"exists","propertyName":"login","id":1,"type":"d"}]},{"target":"node","style":{"type":"node","shape":"box","shapeColor":"rgb(135, 73, 135)","labelFont":"monospace","labelSize":10,"labelColor":"#eeeeee","labelPattern":"Actor: {prop.name}"},"order":1,"id":2,"filters":[{"method":"exists","propertyName":"name","id":1,"type":"d"}]},{"target":"node","style":{"type":"node","shape":"box","shapeColor":"rgb(60, 130, 124)","labelFont":"monospace","labelSize":10,"labelColor":"#eeeeee","labelPattern":"Movie: {prop.title}"},"order":2,"id":1,"filters":[{"method":"exists","propertyName":"title","id":1,"type":"d"}]}],"id":1}]
 
       CURRENT_VIZ_PROFILE_KEY : 'databrowser.visualization.currentProfile'
 
