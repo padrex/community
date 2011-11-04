@@ -43,6 +43,8 @@ public class TraversalDescriptionBuilder
             result = describeOrder( result, description );
             result = describeUniqueness( result, description );
             result = describeRelationships( result, description );
+            result = describePruneEvaluator( result, description );
+            result = describeReturnFilter( result, description );
             return result;
         }
         catch ( NoClassDefFoundError e )
@@ -58,16 +60,10 @@ public class TraversalDescriptionBuilder
     private static TraversalDescription describeReturnFilter( TraversalDescription result,
             Map<String, Object> description )
     {
-        Object returnDescription = description.get( "return_filter" );
-        if ( returnDescription != null )
-        {
-            result = result.filter( EvaluatorFactory.returnFilter( (Map) returnDescription ) );
-        }
-        else
-        {
-            // Default return evaluator
-            result = result.filter( Traversal.returnAllButStartNode() );
-        }
+        
+        // Default return evaluator
+        result = result.filter( Traversal.returnAllButStartNode() );
+    
         return result;
     }
 
@@ -75,14 +71,14 @@ public class TraversalDescriptionBuilder
     private static TraversalDescription describePruneEvaluator( TraversalDescription result,
             Map<String, Object> description )
     {
-        Object pruneDescription = description.get( "prune_evaluator" );
-        if ( pruneDescription != null )
-        {
-            result = result.prune( EvaluatorFactory.pruneEvaluator( (Map) pruneDescription ) );
-        }
+//        Object pruneDescription = description.get( "prune_evaluator" );
+//        if ( pruneDescription != null )
+//        {
+//            result = result.prune( EvaluatorFactory.pruneEvaluator( (Map) pruneDescription ) );
+//        }
 
         Object maxDepth = description.get( "max_depth" );
-        maxDepth = maxDepth != null || pruneDescription != null ? maxDepth : 1;
+        maxDepth = maxDepth != null ? maxDepth : 1;
         if ( maxDepth != null )
         {
             result = result.prune( Traversal.pruneAfterDepth( ( (Number) maxDepth ).intValue() ) );
