@@ -24,7 +24,6 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.Map;
 
 import org.neo4j.helpers.Pair;
-import org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog.LogExtractor;
 
 public abstract class LogBackedXaDataSource extends XaDataSource
 {
@@ -128,7 +127,7 @@ public abstract class LogBackedXaDataSource extends XaDataSource
     {
         return logicalLog.getMasterIdForCommittedTransaction( txId );
     }
-    
+
     @Override
     public LogExtractor getLogExtractor( long startTxId, long endTxIdHint ) throws IOException
     {

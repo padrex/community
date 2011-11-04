@@ -39,6 +39,8 @@ import javax.transaction.xa.Xid;
 import org.neo4j.helpers.Exceptions;
 import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.impl.cache.LruCache;
+import org.neo4j.kernel.impl.nioneo.xa.Command;
+import org.neo4j.kernel.impl.nioneo.xa.CommandRecordVisitor;
 import org.neo4j.kernel.impl.transaction.xaframework.LogEntry.Start;
 import org.neo4j.kernel.impl.util.ArrayMap;
 import org.neo4j.kernel.impl.util.BufferedFileChannel;
@@ -994,7 +996,7 @@ public class XaLogicalLog
         logChannel.close();
     }
 
-    public class LogExtractor
+    public class LogExtractorImpl implements LogExtractor
     {
         /**
          * If tx range is smaller than this threshold ask the position cache for the
@@ -1013,7 +1015,10 @@ public class XaLogicalLog
         private long nextExpectedTxId;
         private int counter;
 
-        public LogExtractor( long startTxId, long endTxIdHint ) throws IOException
+        private CommandRecordVisitor commandVisitor;
+
+        public LogExtractorImpl( long startTxId, long endTxIdHint )
+                                                                   throws IOException
         {
             this.startTxId = startTxId;
             this.nextExpectedTxId = startTxId;
@@ -1107,12 +1112,14 @@ public class XaLogicalLog
             readAndAssertLogHeader( localBuffer, source, version ); // To get to the right position to start reading entries from
         }
 
-        private long collectNextFromCurrentSource( LogBuffer target ) throws IOException
+        private long collectNextFromCurrentSource( LogBuffer target )
+                throws IOException
         {
             LogEntry entry = null;
             while ( collector.hasInFutureQueue() || // if something in queue then don't read next entry
                     (entry = LogIoUtils.readEntry( localBuffer, source, cf )) != null )
             {
+                processEntry( entry );
                 LogEntry foundEntry = collector.collect( entry, target );
                 if ( foundEntry != null )
                 {   // It just wrote the transaction, w/o the done record though. Add it
@@ -1134,6 +1141,24 @@ public class XaLogicalLog
         protected void finalize() throws Throwable
         {
             ensureSourceIsClosed();
+        }
+
+        protected LogEntry processEntry( LogEntry entry )
+        {
+            if ( commandVisitor != null && entry instanceof LogEntry.Command )
+            {
+                LogEntry.Command theCommand = (LogEntry.Command) entry;
+                if ( theCommand.getXaCommand() instanceof Command )
+                {
+                    ( (Command) theCommand.getXaCommand() ).accept( commandVisitor );
+                }
+            }
+            return entry;
+        }
+
+        public void setCommandVisitor( CommandRecordVisitor theVisitor )
+        {
+            this.commandVisitor = theVisitor;
         }
 
         private void ensureSourceIsClosed()
@@ -1171,7 +1196,7 @@ public class XaLogicalLog
 
     public LogExtractor getLogExtractor( long startTxId, long endTxIdHint ) throws IOException
     {
-        return new LogExtractor( startTxId, endTxIdHint );
+        return new LogExtractorImpl( startTxId, endTxIdHint );
     }
 
     public static final int MASTER_ID_REPRESENTING_NO_MASTER = -1;

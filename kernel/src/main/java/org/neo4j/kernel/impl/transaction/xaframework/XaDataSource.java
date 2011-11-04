@@ -27,7 +27,6 @@ import java.util.StringTokenizer;
 
 import org.neo4j.helpers.Pair;
 import org.neo4j.helpers.collection.ClosableIterable;
-import org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog.LogExtractor;
 import org.neo4j.kernel.impl.util.StringLogger;
 
 /**
@@ -303,7 +302,7 @@ public abstract class XaDataSource
         {
             return null;
         }
-        
+
         if ( config.equals( Boolean.TRUE.toString() ) || config.equals( Boolean.FALSE.toString() ) )
         {
             return Boolean.parseBoolean( config );
@@ -352,7 +351,7 @@ public abstract class XaDataSource
     {
         throw new UnsupportedOperationException( getClass().getName() );
     }
-    
+
     public void setLastCommittedTxId( long txId )
     {
         throw new UnsupportedOperationException( getClass().getName() );

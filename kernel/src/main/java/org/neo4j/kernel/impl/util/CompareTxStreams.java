@@ -24,8 +24,8 @@ import java.io.IOException;
 import org.neo4j.kernel.Config;
 import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.impl.transaction.xaframework.InMemoryLogBuffer;
+import org.neo4j.kernel.impl.transaction.xaframework.LogExtractor;
 import org.neo4j.kernel.impl.transaction.xaframework.XaDataSource;
-import org.neo4j.kernel.impl.transaction.xaframework.XaLogicalLog.LogExtractor;
 
 public class CompareTxStreams
 {
@@ -33,7 +33,7 @@ public class CompareTxStreams
     {
         EmbeddedGraphDatabase db1 = new EmbeddedGraphDatabase( args[0] );
         EmbeddedGraphDatabase db2 = new EmbeddedGraphDatabase( args[1] );
-        
+
         try
         {
             LogExtractor extractor1 = getLogExtractor( db1 );
@@ -80,7 +80,7 @@ public class CompareTxStreams
             db2.shutdown();
         }
     }
-    
+
     private static LogExtractor getLogExtractor( EmbeddedGraphDatabase db ) throws IOException
     {
         XaDataSource ds = db.getConfig().getTxModule().getXaDataSourceManager().getXaDataSource( Config.DEFAULT_DATA_SOURCE_NAME );
