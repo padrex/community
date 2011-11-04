@@ -24,7 +24,6 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
@@ -59,7 +58,6 @@ import org.neo4j.server.database.DatabaseBlockedException;
 import org.neo4j.server.rest.domain.GraphDbHelper;
 import org.neo4j.server.rest.domain.JsonHelper;
 import org.neo4j.server.rest.domain.JsonParseException;
-import org.neo4j.server.rest.domain.TraverserReturnType;
 import org.neo4j.server.rest.paging.FakeClock;
 import org.neo4j.server.rest.paging.LeaseManager;
 import org.neo4j.server.rest.repr.BadInputException;
@@ -1321,106 +1319,7 @@ public class RestfulGraphDatabaseTest
         assertEquals( Status.NOT_FOUND.getStatusCode(), response.getStatus() );
     }
 
-    @Test
-    public void shouldGet404WhenTraversingFromNonExistentNode() throws DatabaseBlockedException
-    {
-        Response response = service.traverse( 9999999, TraverserReturnType.node, "{}" );
-        assertEquals( Status.NOT_FOUND.getStatusCode(), response.getStatus() );
-    }
-
-    @Test
-    public void shouldGet200WhenNoHitsReturnedFromTraverse() throws DatabaseBlockedException, BadInputException
-    {
-        long startNode = helper.createNode();
-        Response response = service.traverse( startNode, TraverserReturnType.node, "" );
-        assertEquals( Status.OK.getStatusCode(), response.getStatus() );
-
-        List<Object> resultAsList = output.getResultAsList();
-
-        assertThat( resultAsList.size(), is( 0 ) );
-    }
-
-    @Test
-    public void shouldGetSomeHitsWhenTraversingWithDefaultDescription() throws DatabaseBlockedException
-    {
-        long startNode = helper.createNode();
-        long child1_l1 = helper.createNode();
-        helper.createRelationship( "knows", startNode, child1_l1 );
-        long child2_l1 = helper.createNode();
-        helper.createRelationship( "knows", startNode, child2_l1 );
-        long child1_l2 = helper.createNode();
-        helper.createRelationship( "knows", child2_l1, child1_l2 );
-        Response response = service.traverse( startNode, TraverserReturnType.node, "" );
-        String entity = entityAsString( response );
-        assertTrue( entity.contains( "/node/" + child1_l1 ) );
-        assertTrue( entity.contains( "/node/" + child2_l1 ) );
-        assertFalse( entity.contains( "/node/" + child1_l2 ) );
-        assertEquals( response.getMetadata()
-                .getFirst( HttpHeaders.CONTENT_ENCODING ), "UTF-8" );
-    }
-
-    @Test
-    public void shouldBeAbleToDescribeTraverser() throws DatabaseBlockedException
-    {
-        long startNode = helper.createNode( MapUtil.map( "name", "Mattias" ) );
-        long node1 = helper.createNode( MapUtil.map( "name", "Emil" ) );
-        long node2 = helper.createNode( MapUtil.map( "name", "Johan" ) );
-        long node3 = helper.createNode( MapUtil.map( "name", "Tobias" ) );
-        helper.createRelationship( "knows", startNode, node1 );
-        helper.createRelationship( "knows", startNode, node2 );
-        helper.createRelationship( "knows", node1, node3 );
-        String description = "{"
-                             + "\"prune_evaluator\":{\"language\":\"builtin\",\"name\":\"none\"},"
-                             + "\"return_filter\":{\"language\":\"javascript\",\"body\":\"position.endNode().getProperty('name').toLowerCase().contains('t');\"},"
-                             + "\"order\":\"depth_first\","
-                             + "\"relationships\":{\"type\":\"knows\",\"direction\":\"all\"}" + "}";
-        Response response = service.traverse( startNode, TraverserReturnType.node, description );
-        assertEquals( Status.OK.getStatusCode(), response.getStatus() );
-        String entity = entityAsString( response );
-        assertTrue( entity.contains( "node/" + startNode ) );
-        assertFalse( entity.contains( "node/" + node1 ) );
-        assertFalse( entity.contains( "node/" + node2 ) );
-        assertTrue( entity.contains( "node/" + node3 ) );
-    }
-
-    @Test
-    public void shouldBeAbleToGetOtherResultTypesWhenTraversing() throws DatabaseBlockedException
-    {
-        long startNode = helper.createNode( MapUtil.map( "name", "Mattias" ) );
-        long node1 = helper.createNode( MapUtil.map( "name", "Emil" ) );
-        long node2 = helper.createNode( MapUtil.map( "name", "Johan" ) );
-        long node3 = helper.createNode( MapUtil.map( "name", "Tobias" ) );
-        long rel1 = helper.createRelationship( "knows", startNode, node1 );
-        long rel2 = helper.createRelationship( "knows", startNode, node2 );
-        long rel3 = helper.createRelationship( "knows", node1, node3 );
-
-        Response response = service.traverse( startNode, TraverserReturnType.relationship, "" );
-        assertEquals( Status.OK.getStatusCode(), response.getStatus() );
-        String entity = entityAsString( response );
-        assertTrue( entity.contains( "/relationship/" + rel1 ) );
-        assertTrue( entity.contains( "/relationship/" + rel2 ) );
-        assertFalse( entity.contains( "/relationship/" + rel3 ) );
-
-        response = service.traverse( startNode, TraverserReturnType.path, "" );
-        assertEquals( Status.OK.getStatusCode(), response.getStatus() );
-        entity = entityAsString( response );
-        assertTrue( entity.contains( "nodes" ) );
-        assertTrue( entity.contains( "relationships" ) );
-        assertTrue( entity.contains( "length" ) );
-
-        response = service.traverse( startNode, TraverserReturnType.fullpath, "" );
-        assertEquals( Status.OK.getStatusCode(), response.getStatus() );
-        entity = entityAsString( response );
-        assertTrue( entity.contains( "nodes" ) );
-        assertTrue( entity.contains( "data" ) );
-        assertTrue( entity.contains( "type" ) );
-        assertTrue( entity.contains( "self" ) );
-        assertTrue( entity.contains( "outgoing_relationships" ) );
-        assertTrue( entity.contains( "incoming_relationships" ) );
-        assertTrue( entity.contains( "relationships" ) );
-        assertTrue( entity.contains( "length" ) );
-    }
-
+  
     private static String markWithUnicodeMarker( String string )
     {
         return String.valueOf( (char) 0xfeff ) + string;
@@ -1462,59 +1361,7 @@ public class RestfulGraphDatabaseTest
         assertThat( resultAsList.size(), is( 1 ) );
     }
 
-    @Test
-    public void shouldBeAbleToParseJsonEvenWithUnicodeMarkerAtTheStart() throws DatabaseBlockedException,
-            JsonParseException
-    {
-        Response response = service.createNode( markWithUnicodeMarker( "{\"name\":\"Mattias\"}" ) );
-        assertEquals( Status.CREATED.getStatusCode(), response.getStatus() );
-        String nodeLocation = response.getMetadata()
-                .getFirst( HttpHeaders.LOCATION )
-                .toString();
-
-        long node = helper.createNode();
-        assertEquals( Status.NO_CONTENT.getStatusCode(),
-                service.setNodeProperty( node, "foo", markWithUnicodeMarker( "\"bar\"" ) )
-                        .getStatus() );
-        assertEquals( Status.NO_CONTENT.getStatusCode(),
-                service.setNodeProperty( node, "foo", markWithUnicodeMarker( "" + 10 ) )
-                        .getStatus() );
-        assertEquals( Status.NO_CONTENT.getStatusCode(),
-                service.setAllNodeProperties( node, markWithUnicodeMarker( "{\"name\":\"Something\",\"number\":10}" ) )
-                        .getStatus() );
-
-        assertEquals(
-                Status.CREATED.getStatusCode(),
-                service.createRelationship( node,
-                        markWithUnicodeMarker( "{\"to\":\"" + nodeLocation + "\",\"type\":\"knows\"}" ) )
-                        .getStatus() );
-
-        long relationship = helper.createRelationship( "knows" );
-        assertEquals( Status.NO_CONTENT.getStatusCode(),
-                service.setRelationshipProperty( relationship, "foo", markWithUnicodeMarker( "\"bar\"" ) )
-                        .getStatus() );
-        assertEquals( Status.NO_CONTENT.getStatusCode(),
-                service.setRelationshipProperty( relationship, "foo", markWithUnicodeMarker( "" + 10 ) )
-                        .getStatus() );
-        assertEquals(
-                Status.NO_CONTENT.getStatusCode(),
-                service.setAllRelationshipProperties( relationship,
-                        markWithUnicodeMarker( "{\"name\":\"Something\",\"number\":10}" ) )
-                        .getStatus() );
-
-        assertEquals(
-                Status.CREATED.getStatusCode(),
-                service.addToNodeIndex(
-                        "node",
-                        markWithUnicodeMarker( "{\"key\":\"foo\", \"value\":\"bar\", \"uri\": \"" + nodeLocation
-                                               + "\"}" ) )
-                        .getStatus() );
-
-        assertEquals( Status.OK.getStatusCode(),
-                service.traverse( node, TraverserReturnType.node, markWithUnicodeMarker( "{\"max depth\":2}" ) )
-                        .getStatus() );
-    }
-
+    
     @Test
     public void shouldAdvertiseUriForQueringAllRelationsInTheDatabase()
     {

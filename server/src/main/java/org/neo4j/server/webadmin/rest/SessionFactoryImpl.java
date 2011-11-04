@@ -23,34 +23,17 @@ import javax.servlet.http.HttpSession;
 
 import org.neo4j.server.database.Database;
 import org.neo4j.server.webadmin.console.CypherSession;
-import org.neo4j.server.webadmin.console.GremlinSession;
 import org.neo4j.server.webadmin.console.ScriptSession;
 
 public class SessionFactoryImpl implements SessionFactory
 {
-    private HttpSession httpSession;
-
     public SessionFactoryImpl( HttpSession httpSession )
     {
-        this.httpSession = httpSession;
     }
 
     @Override
     public ScriptSession createSession( String engineName, Database database )
     {
-        if ( engineName.equals( "cypher" ) )
-        {
-            return new CypherSession( database.graph );
-        }
-        else
-        {
-            Object session = httpSession.getAttribute( "consoleSession" );
-            if ( session == null )
-            {
-                session = new GremlinSession( database );
-                httpSession.setAttribute( "consoleSession", session );
-            }
-            return (ScriptSession) session;
-        }
+        return new CypherSession( database.graph );
     }
 }

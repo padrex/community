@@ -54,9 +54,5 @@ public class RootServiceTest
 
         assertThat( result.get( "console" )
                 .toString(), containsString( String.format( "%sserver/console", uri.toString() ) ) );
-        assertThat( result.get( "jmx" )
-                .toString(), containsString( String.format( "%sserver/jmx", uri.toString() ) ) );
-        assertThat( result.get( "monitor" )
-                .toString(), containsString( String.format( "%sserver/monitor", uri.toString() ) ) );
     }
 }

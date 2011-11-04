@@ -85,9 +85,5 @@ public class GetOnRootFunctionalTest extends AbstractRestFunctionalTestBase
         response = RestRequest.req().get( (String) map.get( "extensions_info" ) );
         assertEquals( 200, response.getStatus() );
         response.close();
-
-        response = RestRequest.req().post( (String) map.get( "batch" ), "[]" );
-        assertEquals( 200, response.getStatus() );
-        response.close();
     }
 }

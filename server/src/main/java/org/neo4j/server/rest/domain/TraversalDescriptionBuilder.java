@@ -43,8 +43,6 @@ public class TraversalDescriptionBuilder
             result = describeOrder( result, description );
             result = describeUniqueness( result, description );
             result = describeRelationships( result, description );
-            result = describePruneEvaluator( result, description );
-            result = describeReturnFilter( result, description );
             return result;
         }
         catch ( NoClassDefFoundError e )

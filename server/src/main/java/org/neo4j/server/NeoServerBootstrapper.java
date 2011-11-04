@@ -24,7 +24,7 @@ import java.util.Map;
 
 import org.apache.commons.configuration.Configuration;
 import org.neo4j.kernel.AbstractGraphDatabase;
-import org.neo4j.kernel.EmbeddedGraphDatabase;
+import org.neo4j.kernel.EmbeddedReadOnlyGraphDatabase;
 import org.neo4j.server.database.GraphDatabaseFactory;
 import org.neo4j.server.modules.DiscoveryModule;
 import org.neo4j.server.modules.ManagementApiModule;
@@ -62,7 +62,7 @@ public class NeoServerBootstrapper extends Bootstrapper
             public AbstractGraphDatabase createDatabase( String databaseStoreDirectory,
                     Map<String, String> databaseProperties )
             {
-                return new EmbeddedGraphDatabase( databaseStoreDirectory, databaseProperties );
+                return new EmbeddedReadOnlyGraphDatabase( databaseStoreDirectory, databaseProperties );
             }
         };
     }
