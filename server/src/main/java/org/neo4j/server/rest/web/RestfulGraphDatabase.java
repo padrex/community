@@ -19,15 +19,12 @@
  */
 package org.neo4j.server.rest.web;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
@@ -47,7 +44,6 @@ import org.neo4j.server.rest.domain.TraverserReturnType;
 import org.neo4j.server.rest.paging.LeaseManager;
 import org.neo4j.server.rest.repr.BadInputException;
 import org.neo4j.server.rest.repr.InputFormat;
-import org.neo4j.server.rest.repr.ListRepresentation;
 import org.neo4j.server.rest.repr.OutputFormat;
 import org.neo4j.server.rest.repr.PropertiesRepresentation;
 import org.neo4j.server.rest.web.DatabaseActions.RelationshipDirection;
@@ -1087,98 +1083,6 @@ public class RestfulGraphDatabase
         catch ( NotFoundException e )
         {
             return output.notFound( e );
-        }
-    }
-
-    // Paged traversal
-
-    @DELETE
-    @Path( PATH_TO_PAGED_TRAVERSERS )
-    public Response removePagedTraverser( @PathParam( "traverserId" ) String traverserId )
-    {
-
-        if ( actions.removePagedTraverse( traverserId ) )
-        {
-            return Response.ok()
-                    .build();
-        }
-        else
-        {
-            return output.notFound();
-        }
-
-    }
-
-    @GET
-    @Path( PATH_TO_PAGED_TRAVERSERS )
-    public Response pagedTraverse( @PathParam( "traverserId" ) String traverserId,
-            @PathParam( "returnType" ) TraverserReturnType returnType )
-    {
-        try
-        {
-            ListRepresentation result = actions.pagedTraverse( traverserId, returnType );
-
-            return Response.ok( uriInfo.getRequestUri() )
-                    .entity( output.format( result ) )
-                    .build();
-        }
-        catch ( NotFoundException e )
-        {
-            return output.notFound( e );
-        }
-    }
-
-    @POST
-    @Path( PATH_TO_CREATE_PAGED_TRAVERSERS )
-    public Response createPagedTraverser( @PathParam( "nodeId" ) long startNode,
-            @PathParam( "returnType" ) TraverserReturnType returnType,
-            @QueryParam( "pageSize" ) @DefaultValue( FIFTY ) int pageSize,
-            @QueryParam( "leaseTime" ) @DefaultValue( SIXTY_SECONDS ) int leaseTimeInSeconds, String body )
-    {
-        try
-        {
-            validatePageSize( pageSize );
-            validateLeaseTime( leaseTimeInSeconds );
-
-            String traverserId = actions.createPagedTraverser( startNode, input.readMap( body ), pageSize,
-                    leaseTimeInSeconds );
-
-            String responseBody = output.format( actions.pagedTraverse( traverserId, returnType ) );
-
-            URI uri = new URI( uriInfo.getBaseUri()
-                    .toString() + "node/" + startNode + "/paged/traverse/" + returnType + "/" + traverserId );
-
-            return Response.created( uri.normalize() )
-                    .entity( responseBody )
-                    .build();
-        }
-        catch ( BadInputException e )
-        {
-            return output.badRequest( e );
-        }
-        catch ( NotFoundException e )
-        {
-            return output.notFound( e );
-        }
-        catch ( URISyntaxException e )
-        {
-            return output.serverError( e );
-        }
-    }
-
-    private void validateLeaseTime( int leaseTimeInSeconds ) throws BadInputException
-    {
-        if ( leaseTimeInSeconds < 1 )
-        {
-            throw new BadInputException( "Lease time less than 1 second is not supported" );
-        }
-    }
-
-    private void validatePageSize( int pageSize ) throws BadInputException
-    {
-        if ( pageSize < 1 )
-        {
-            throw new BadInputException( "Page size less than 1 is not permitted" );
         }
     }
 
