@@ -33,9 +33,6 @@ define(
 
       events : 
         "keypress #data-console" : "consoleKeyPressed"
-        "click #data-create-node" : "createNode"
-        "click #data-create-relationship" : "createRelationship"
-        "click #data-switch-view" : "switchView"
         "click #data-execute-console" : "search"
 
       initialize : (options)->
@@ -46,7 +43,7 @@ define(
         @urlResolver = new ItemUrlResolver(@server)
         
         @dataModel.bind("change:query", @queryChanged)
-        @switchToTabularView()
+        @switchToVisualizedView()
 
       render : =>
         $(@el).html @template( 
@@ -95,16 +92,6 @@ define(
         if ev.which is 13 and ev.ctrlKey # ctrl + enter
           ev.stopPropagation()
           @search()
-
-      switchView : (ev) =>
-        if @viewType == "visualized"
-          $(ev.target).removeClass("tabular")
-          @switchToTabularView()
-        else
-          $(ev.target).addClass("tabular")
-          @switchToVisualizedView()
-        
-        @renderDataView()
           
 
       switchToVisualizedView : =>
@@ -115,14 +102,6 @@ define(
         @visualizedView ?= new VisualizedView(dataModel:@dataModel, appState:@appState, server:@server)
         @viewType = "visualized"
         @dataView = @visualizedView 
-
-      switchToTabularView : =>
-        if @dataView?
-          @dataView.detach()
-      
-        @tabularView ?= new TabularView(dataModel:@dataModel, appState:@appState, server:@server)
-        @viewType = "tabular"
-        @dataView = @tabularView
 
       unbind : ->
         @dataModel.unbind("change:query", @queryChanged)
