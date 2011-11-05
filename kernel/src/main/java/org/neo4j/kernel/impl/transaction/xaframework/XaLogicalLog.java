@@ -110,17 +110,17 @@ public class XaLogicalLog
             new LruCache<Long, Long>( "Log header cache", 1000, null );
 
     XaLogicalLog( String fileName, XaResourceManager xaRm, XaCommandFactory cf,
-        XaTransactionFactory xaTf, Map<Object,Object> config )
+            XaTransactionFactory xaTf, LogDeserializerProvider logDeserializer,
+            Map<Object, Object> config )
     {
         this.fileName = fileName;
         this.xaRm = xaRm;
         this.cf = cf;
         this.xaTf = xaTf;
         this.logBufferFactory = (LogBufferFactory) config.get( LogBufferFactory.class );
-        LogDeserializerProvider tempLogApplierFactory = (LogDeserializerProvider) config.get( LogDeserializerProvider.class );
-        if ( tempLogApplierFactory != null )
+        if ( logDeserializer != null )
         {
-            logApplierFactory = tempLogApplierFactory;
+            logApplierFactory = logDeserializer;
         }
         else
         {
@@ -285,15 +285,15 @@ public class XaLogicalLog
 
     // returns identifier for transaction
     // [TX_START][xid[gid.length,bid.lengh,gid,bid]][identifier][format id]
-    public synchronized int start( Xid xid, int masterId ) throws XAException
+    public synchronized int start( Xid xid, int masterId, int myId ) throws XAException
     {
         int xidIdent = getNextIdentifier();
         try
         {
             long position = writeBuffer.getFileChannelPosition();
             long timeWritten = System.currentTimeMillis();
-            LogEntry.Start start = new LogEntry.Start( xid, xidIdent, masterId, position, timeWritten );
-            LogIoUtils.writeStart( writeBuffer, xidIdent, xid, masterId, timeWritten );
+            LogEntry.Start start = new LogEntry.Start( xid, xidIdent, masterId, myId, position, timeWritten );
+            LogIoUtils.writeStart( writeBuffer, xidIdent, xid, masterId, myId, timeWritten );
             xidIdentMap.put( xidIdent, start );
         }
         catch ( IOException e )
@@ -321,7 +321,7 @@ public class XaLogicalLog
     }
 
     // [TX_1P_COMMIT][identifier]
-    public synchronized void commitOnePhase( int identifier, long txId, int masterId )
+    public synchronized void commitOnePhase( int identifier, long txId )
         throws XAException
     {
         LogEntry.Start startEntry = xidIdentMap.get( identifier );
@@ -329,9 +329,9 @@ public class XaLogicalLog
         assert txId != -1;
         try
         {
-            LogIoUtils.writeCommit( false, writeBuffer, identifier, txId, masterId, System.currentTimeMillis() );
+            LogIoUtils.writeCommit( false, writeBuffer, identifier, txId, System.currentTimeMillis() );
             writeBuffer.force();
-            cacheTxStartPosition( txId, masterId, startEntry );
+            cacheTxStartPosition( txId, startEntry.getMasterId(), startEntry );
         }
         catch ( IOException e )
         {
@@ -398,7 +398,7 @@ public class XaLogicalLog
     }
 
     // [TX_2P_COMMIT][identifier]
-    public synchronized void commitTwoPhase( int identifier, long txId, int masterId )
+    public synchronized void commitTwoPhase( int identifier, long txId )
         throws XAException
     {
         LogEntry.Start startEntry = xidIdentMap.get( identifier );
@@ -406,9 +406,9 @@ public class XaLogicalLog
         assert txId != -1;
         try
         {
-            LogIoUtils.writeCommit( true, writeBuffer, identifier, txId, masterId, System.currentTimeMillis() );
+            LogIoUtils.writeCommit( true, writeBuffer, identifier, txId, System.currentTimeMillis() );
             writeBuffer.force();
-            cacheTxStartPosition( txId, masterId, startEntry );
+            cacheTxStartPosition( txId, startEntry.getMasterId(), startEntry );
         }
         catch ( IOException e )
         {
@@ -1160,21 +1160,18 @@ public class XaLogicalLog
 
         public long getLastTxChecksum()
         {
-            return collector.getLastTxChecksum();
+            return getLastStartEntry().getTimeWritten();
+        }
+
+        public Start getLastStartEntry()
+        {
+            return collector.getLastStartEntry();
         }
     }
 
     public LogExtractor getLogExtractor( long startTxId, long endTxIdHint ) throws IOException
     {
         return new LogExtractor( startTxId, endTxIdHint );
-    }
-
-    int getMasterIdForIdentifier( int identifier )
-    {
-        // Only called during recovery so ok not thread safe.
-        Start startEntry = xidIdentMap.get( identifier );
-        if ( startEntry == null ) throw new RuntimeException( "No start entry for " + identifier );
-        return startEntry.getMasterId();
     }
 
     public static final int MASTER_ID_REPRESENTING_NO_MASTER = -1;
@@ -1197,7 +1194,7 @@ public class XaLogicalLog
         {
             if ( extractor.extractNext( NullLogBuffer.INSTANCE ) != -1 )
             {
-                return Pair.of( extractor.lastCommitEntry.getMasterId(), extractor.getLastTxChecksum() );
+                return Pair.of( extractor.getLastStartEntry().getMasterId(), extractor.getLastTxChecksum() );
             }
             throw new RuntimeException( "Unable to find commit entry for txId[" + txId + "]" );// in log[" + version + "]" );
         }
@@ -1330,8 +1327,10 @@ public class XaLogicalLog
         }
 
         @Override
-        public LogDeserializer getLogApplier( ReadableByteChannel byteChannel,
-                LogBuffer buffer, LogApplier applier, XaCommandFactory cf )
+        public LogDeserializer getLogDeserializer(
+                ReadableByteChannel byteChannel,
+                LogBuffer buffer, LogApplier applier, XaCommandFactory cf,
+                XaDataSource ds )
         {
             return new LogDeserializerImpl( byteChannel, applier );
         }
@@ -1417,7 +1416,7 @@ public class XaLogicalLog
 
         long logEntriesFound = 0;
         scanIsComplete = false;
-        LogDeserializer logApplier = logApplierFactory.getLogApplier(
+        LogDeserializer logApplier = logApplierFactory.getLogDeserializer(
                 byteChannel, writeBuffer, new LogApplier()
                 {
                     @Override
@@ -1425,7 +1424,7 @@ public class XaLogicalLog
                     {
                         applyEntry( entry );
                     }
-                }, cf );
+                }, cf, xaRm.getDataSource() );
         int xidIdent = getNextIdentifier();
         long startEntryPosition = writeBuffer.getFileChannelPosition();
         while ( logApplier.readAndWriteAndApplyEntry( xidIdent ) )
@@ -1441,7 +1440,7 @@ public class XaLogicalLog
         startEntry.setStartPosition( startEntryPosition );
 //        System.out.println( "applyTxWithoutTxId#before 1PC @ pos: " + writeBuffer.getFileChannelPosition() );
         LogEntry.OnePhaseCommit commit = new LogEntry.OnePhaseCommit(
-                xidIdent, nextTxId, masterId, System.currentTimeMillis() );
+                xidIdent, nextTxId, System.currentTimeMillis() );
         LogIoUtils.writeLogEntry( commit, writeBuffer );
         // need to manually force since xaRm.commit will not do it (transaction marked as recovered)
         writeBuffer.force();
@@ -1479,16 +1478,15 @@ public class XaLogicalLog
 //        System.out.println( "applyFullTx#start @ pos: " + writeBuffer.getFileChannelPosition() );
         long logEntriesFound = 0;
         scanIsComplete = false;
-        LogDeserializer logApplier = logApplierFactory.getLogApplier(
+        LogDeserializer logApplier = logApplierFactory.getLogDeserializer(
                 byteChannel, writeBuffer, new LogApplier()
                 {
                     @Override
                     public void apply( LogEntry entry ) throws IOException
                     {
                         applyEntry( entry );
-
                     }
-                }, cf );
+                }, cf, xaRm.getDataSource() );
         int xidIdent = getNextIdentifier();
         long startEntryPosition = writeBuffer.getFileChannelPosition();
         boolean successfullyApplied = false;
@@ -1524,7 +1522,7 @@ public class XaLogicalLog
         }
         startEntry.setStartPosition( startEntryPosition );
         cacheTxStartPosition( logApplier.getCommitEntry().getTxId(),
-                logApplier.getCommitEntry().getMasterId(), startEntry );
+                startEntry.getMasterId(), startEntry );
 //        System.out.println( "applyFullTx#end @ pos: " + writeBuffer.getFileChannelPosition() );
         checkLogRotation();
     }
@@ -1612,7 +1610,7 @@ public class XaLogicalLog
                     LogEntry.Start startEntry = xidIdentMap.get( entry.getIdentifier() );
                     LogEntry.Commit commitEntry = (LogEntry.Commit) entry;
                     TxPosition oldPos = txStartPositionCache.get( commitEntry.getTxId() );
-                    TxPosition newPos = cacheTxStartPosition( commitEntry.getTxId(), commitEntry.getMasterId(), startEntry, logVersion+1 );
+                    TxPosition newPos = cacheTxStartPosition( commitEntry.getTxId(), startEntry.getMasterId(), startEntry, logVersion+1 );
                     msgLog.logMessage( "Updated tx " + ((LogEntry.Commit) entry ).getTxId() +
                             " from " + oldPos + " to " + newPos );
                 }
@@ -1817,7 +1815,7 @@ public class XaLogicalLog
     {
         LogEntry collect( LogEntry entry, LogBuffer target ) throws IOException;
 
-        long getLastTxChecksum();
+        LogEntry.Start getLastStartEntry();
 
         boolean hasInFutureQueue();
 
@@ -1863,9 +1861,9 @@ public class XaLogicalLog
         }
 
         @Override
-        public long getLastTxChecksum()
+        public LogEntry.Start getLastStartEntry()
         {
-            return startEntry.getTimeWritten();
+            return startEntry;
         }
     }
 
@@ -1876,7 +1874,7 @@ public class XaLogicalLog
         private int identifier;
         private final Map<Long, List<LogEntry>> futureQueue = new HashMap<Long, List<LogEntry>>();
         private long nextExpectedTxId;
-        private long lastChecksum;
+        private LogEntry.Start lastStartEntry;
 
         KnownTxIdCollector( long startTxId )
         {
@@ -1896,9 +1894,9 @@ public class XaLogicalLog
         }
 
         @Override
-        public long getLastTxChecksum()
+        public LogEntry.Start getLastStartEntry()
         {
-            return lastChecksum;
+            return lastStartEntry;
         }
 
         public LogEntry collect( LogEntry entry, LogBuffer target ) throws IOException
@@ -1906,7 +1904,7 @@ public class XaLogicalLog
             if ( futureQueue.containsKey( nextExpectedTxId ) )
             {
                 List<LogEntry> list = futureQueue.remove( nextExpectedTxId++ );
-                lastChecksum = ((LogEntry.Start)list.get( 0 )).getTimeWritten();
+                lastStartEntry = (LogEntry.Start)list.get( 0 );
                 writeToBuffer( list, target );
                 return commitEntryOf( list );
             }
@@ -1941,7 +1939,7 @@ public class XaLogicalLog
 
                 writeToBuffer( entries, target );
                 nextExpectedTxId = commitTxId+1;
-                lastChecksum = ((LogEntry.Start)entries.get( 0 )).getTimeWritten();
+                lastStartEntry = (LogEntry.Start)entries.get( 0 );
                 return entry;
             }
             else if ( entry instanceof LogEntry.Command || entry instanceof LogEntry.Prepare )

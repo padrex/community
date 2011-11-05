@@ -153,13 +153,21 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
                         "Unknown log deserializer provide name "
                                 + deserializerProviderName );
             }
+            else
+            {
+                msgLog.logMessage( "Using "
+                                   + deserializerProvider.getClass()
+                                   + " as the log deserializer implementation, trigger by config option "
+                                   + deserializerProviderName );
+            }
         }
 
-        config.put( LogDeserializerProvider.class, deserializerProvider );
-
         neoStore = new NeoStore( config );
-        xaContainer = XaContainer.create( this, (String) config.get( "logical_log" ),
-                new CommandFactory( neoStore ), new TransactionFactory(), config );
+        config.put( NeoStore.class, neoStore );
+        xaContainer = XaContainer.create( this,
+                (String) config.get( "logical_log" ), new CommandFactory(
+                        neoStore ), new TransactionFactory(),
+                deserializerProvider, config );
         try
         {
             if ( !readOnly )
@@ -274,7 +282,7 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
 //            neoStore.getPropertyStore().getIndexStore() );
 //    }
 
-    NeoStore getNeoStore()
+    public NeoStore getNeoStore()
     {
         return neoStore;
     }
@@ -554,6 +562,11 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
             {
             }
         };
+    }
+
+    public StringLogger getMsgLog()
+    {
+        return msgLog;
     }
 
     public void logStoreVersions()

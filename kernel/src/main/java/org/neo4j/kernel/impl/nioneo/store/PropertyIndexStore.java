@@ -80,6 +80,12 @@ public class PropertyIndexStore extends AbstractStore implements Store, RecordSt
     }
 
     @Override
+    public int getRecordHeaderSize()
+    {
+        return getRecordSize();
+    }
+
+    @Override
     protected void setRecovered()
     {
         super.setRecovered();
@@ -209,17 +215,26 @@ public class PropertyIndexStore extends AbstractStore implements Store, RecordSt
         }
         return record;
     }
-    
+
     @Override
     public PropertyIndexRecord getRecord( long id )
     {
         return getRecord( (int) id );
     }
-    
+
     @Override
     public PropertyIndexRecord forceGetRecord( long id )
     {
-        PersistenceWindow window = acquireWindow( id, OperationType.READ );
+        PersistenceWindow window = null;
+        try
+        {
+            window = acquireWindow( id, OperationType.READ );
+        }
+        catch ( InvalidRecordException e )
+        {
+            return new PropertyIndexRecord( (int)id );
+        }
+        
         try
         {
             return getRecord( (int) id, window, true );
@@ -285,7 +300,7 @@ public class PropertyIndexStore extends AbstractStore implements Store, RecordSt
             }
         }
     }
-    
+
     @Override
     public void forceUpdateRecord( PropertyIndexRecord record )
     {
@@ -370,12 +385,6 @@ public class PropertyIndexStore extends AbstractStore implements Store, RecordSt
         }
         return (String) PropertyStore.getStringFor( PropertyStore.readFullByteArray(
                 propRecord.getKeyBlockId(), relevantRecords, keyPropertyStore ) );
-    }
-
-    @Override
-    public String toString()
-    {
-        return "PropertyIndexStore";
     }
 
     @Override

@@ -30,7 +30,7 @@ public abstract class LogDeserializerProvider extends Service
         super( name );
     }
 
-    public abstract LogDeserializer getLogApplier(
+    public abstract LogDeserializer getLogDeserializer(
             ReadableByteChannel byteChannel, LogBuffer writeBuffer,
-            LogApplier applier, XaCommandFactory cf );
+            LogApplier applier, XaCommandFactory cf, XaDataSource ds );
 }

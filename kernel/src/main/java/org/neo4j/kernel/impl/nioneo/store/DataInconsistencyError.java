@@ -17,17 +17,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.transaction;
+package org.neo4j.kernel.impl.nioneo.store;
 
-import javax.transaction.Transaction;
-
-public interface TxHook
+/**
+ * Thrown when inconsistencies are found in the data.
+ */
+public class DataInconsistencyError extends Error
 {
-    void initializeTransaction( int eventIdentifier );
-    
-    boolean hasAnyLocks( Transaction tx );
-    
-    void finishTransaction( int eventIdentifier, boolean success );
-    
-    boolean freeIdsDuringRollback();
+    public DataInconsistencyError( String message )
+    {
+        super(message);
+    }
 }
