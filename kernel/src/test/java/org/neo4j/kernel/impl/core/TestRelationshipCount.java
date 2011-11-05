@@ -45,14 +45,35 @@ public class TestRelationshipCount extends AbstractNeo4jTestCase
         newTransaction();
         assertEquals( 2, node1.getRelationshipCount() );
         assertEquals( 1, node2.getRelationshipCount() );
-        
-        for ( int i = 0; i < 10000; i++ ) 
+
+        for ( int i = 0; i < 1000; i++ ) 
         {
             if ( i%2 == 0 ) node1.createRelationshipTo( node2, MyRelTypes.TEST );
             else node2.createRelationshipTo( node1, MyRelTypes.TEST );
             assertEquals( i+2+1, node1.getRelationshipCount() );
             assertEquals( i+1+1, node2.getRelationshipCount() );
-            if ( i%100 == 0 ) newTransaction();
+            if ( i%10 == 0 )
+            {
+                newTransaction();
+                clearCache();
+            }
         }
+    }
+    
+    @Test
+    public void withLoops() throws Exception
+    {
+        Node node = getGraphDb().createNode();
+        assertEquals( 0, node.getRelationshipCount() );
+        node.createRelationshipTo( node, MyRelTypes.TEST );
+        assertEquals( 1, node.getRelationshipCount() );
+        Node otherNode = getGraphDb().createNode();
+        node.createRelationshipTo( otherNode, MyRelTypes.TEST2 );
+        assertEquals( 2, node.getRelationshipCount() );
+        assertEquals( 1, otherNode.getRelationshipCount() );
+        newTransaction();
+        node.createRelationshipTo( node, MyRelTypes.TEST_TRAVERSAL );
+        assertEquals( 3, node.getRelationshipCount() );
+        assertEquals( 1, otherNode.getRelationshipCount() );
     }
 }
