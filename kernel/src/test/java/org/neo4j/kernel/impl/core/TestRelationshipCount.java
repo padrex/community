@@ -23,7 +23,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
 import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
 import org.neo4j.kernel.impl.MyRelTypes;
 
@@ -36,10 +35,10 @@ public class TestRelationshipCount extends AbstractNeo4jTestCase
         Node node2 = getGraphDb().createNode();
         assertEquals( 0, node1.getRelationshipCount() );
         assertEquals( 0, node2.getRelationshipCount() );
-        Relationship rel1 = node1.createRelationshipTo( node2, MyRelTypes.TEST );
+        node1.createRelationshipTo( node2, MyRelTypes.TEST );
         assertEquals( 1, node1.getRelationshipCount() );
         assertEquals( 1, node2.getRelationshipCount() );
-        Relationship rel2 = node1.createRelationshipTo( getGraphDb().createNode(), MyRelTypes.TEST2 );
+        node1.createRelationshipTo( getGraphDb().createNode(), MyRelTypes.TEST2 );
         assertEquals( 2, node1.getRelationshipCount() );
         assertEquals( 1, node2.getRelationshipCount() );
         newTransaction();
@@ -63,6 +62,9 @@ public class TestRelationshipCount extends AbstractNeo4jTestCase
     @Test
     public void withLoops() throws Exception
     {
+        // Just to make sure it doesn't work by accident what with ids aligning with count
+        for ( int i = 0; i < 10; i++ ) getGraphDb().createNode().createRelationshipTo( getGraphDb().createNode(), MyRelTypes.TEST );
+        
         Node node = getGraphDb().createNode();
         assertEquals( 0, node.getRelationshipCount() );
         node.createRelationshipTo( node, MyRelTypes.TEST );
@@ -72,6 +74,7 @@ public class TestRelationshipCount extends AbstractNeo4jTestCase
         assertEquals( 2, node.getRelationshipCount() );
         assertEquals( 1, otherNode.getRelationshipCount() );
         newTransaction();
+        assertEquals( 2, node.getRelationshipCount() );
         node.createRelationshipTo( node, MyRelTypes.TEST_TRAVERSAL );
         assertEquals( 3, node.getRelationshipCount() );
         assertEquals( 1, otherNode.getRelationshipCount() );
