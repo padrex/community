@@ -9,40 +9,30 @@
     .foldout_content
       %ul.info_list
         %li
-          %h3 Get node with id 0
-          %p START a = node(0)
-          %p RETURN a
+          %h3 Give me Lucy Liu
+          %p START lucy = node(1000)
+          %p RETURN lucy.name
         %li
-          %h3 Get all nodes connects to node with id 0
-          %p START a = node(0)
-          %p MATCH a-->b
-          %p RETURN b
+          %h3 What movies has Lucy played in?
+          %p START lucy = node(1000)
+          %p MATCH lucy-[:ACTS_IN]->movie
+          %p RETURN movie.title
         %li
-          %h3 Get all nodes connected to node with id 0, and the relationships
-          %p START a = node(0)
-          %p MATCH a-[r]->b
-          %p RETURN r, b
+          %h3 Which other actors has Lucy player with?
+          %p START lucy = node(1000)
+          %p MATCH lucy-[:ACTS_IN]->movie<-[:ACTS_IN]-co_actor
+          %p RETURN DISTINCT co_actor
         %li
-          %h3 Get all nodes related to node with id 0 with relationship type KNOWS
-          %p START a = node(0)
-          %p MATCH a-[:KNOWS]->b
-          %p RETURN b
+          %h3 How many co actors has Lucy had per movie?
+          %p START lucy = node(1000)
+          %p MATCH lucy-[:ACTS_IN]->movie<-[:ACTS_IN]-co_actor
+          %p RETURN movie.title, count(*)
+          %p ORDER BY count(*) DESC
         %li
-          %h3 Get all nodes from index "people", with key "name", matching value "Doctor"
-          %p START a = node:people( name= "Doctor")
-          %p RETURN a
-        %li
-          %h3 Get all nodes connected to the doctor 
-          %p START doctor = node:people(name="Doctor")
-          %p MATCH doctor-[:ENEMY_OF]->enemy
-          %p WHERE enemy.name = "Cybermen"
-          %p RETURN doctor
-        %li
-          %h3 Get all friends of friends of the doctor 
-          %p START doctor = node:people( name="Doctor")
-          %p MATCH doctor-[:FRIEND]->friend-[:FRIEND]->friend_of_friend
-          %p RETURN friend_of_friend
-
+          %h3 What is the shortest path between Lucy and Kevin Bacon?
+          %p START lucy = node(1000), kevin=node(759)
+          %p MATCH p=shortestPath(lucy-[*..4]-kevin)
+          %p RETURN p
 
   .foldout
     %h2
