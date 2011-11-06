@@ -1491,16 +1491,17 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 addRelationshipRecord( firstRel );
             }
             boolean changed = false;
-            long firstPrevRel = firstRel.getFirstPrevRel();
-            long secondPrevRel = firstRel.getSecondPrevRel();
+            long prevRel = -1;
             if ( firstRel.getFirstNode() == node.getId() )
             {
+                prevRel = firstRel.getFirstPrevRel();
                 firstRel.setFirstPrevRel( rel.getId() );
                 firstRel.setFirstInFirstChain( false );
                 changed = true;
             }
             if ( firstRel.getSecondNode() == node.getId() )
             {
+                prevRel = firstRel.getSecondPrevRel();
                 firstRel.setSecondPrevRel( rel.getId() );
                 firstRel.setFirstInSecondChain( false );
                 changed = true;
@@ -1513,12 +1514,12 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             // Update the relationship counter
             if ( rel.getFirstNode() == node.getId() )
             {
-                rel.setFirstPrevRel( firstPrevRel+1 );
+                rel.setFirstPrevRel( prevRel+1 );
                 rel.setFirstInFirstChain( true );
             }
             if ( rel.getSecondNode() == node.getId() )
             {
-                rel.setSecondPrevRel( secondPrevRel+1 );
+                rel.setSecondPrevRel( prevRel+1 );
                 rel.setFirstInSecondChain( true );
             }
         }
