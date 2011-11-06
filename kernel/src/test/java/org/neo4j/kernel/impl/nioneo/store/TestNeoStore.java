@@ -234,6 +234,10 @@ public class TestNeoStore extends AbstractNeo4jTestCase
         file.delete();
         file = new File( file( "neo.relationshiptypestore.db.names.id" ) );
         file.delete();
+        file = new File( file( "neo.relgroupstore.db" ) );
+        file.delete();
+        file = new File( file( "neo.relgroupstore.db.id" ) );
+        file.delete();
         file = new File( "." );
         for ( File nioFile : file.listFiles() )
         {
