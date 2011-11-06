@@ -34,8 +34,8 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
 {
     public static final String TYPE_DESCRIPTOR = "NodeStore";
 
-    // in_use(byte)+next_rel_id(int)+next_prop_id(int)
-    public static final int RECORD_SIZE = 9;
+    // in_use(byte)+next_rel_id(int)+next_prop_id(int)+extra
+    public static final int RECORD_SIZE = 10;
 
     public NodeStore( String fileName, Map<?,?> config )
     {
@@ -223,11 +223,15 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
 
         long relModifier = (inUseByte & 0xEL) << 31;
         long propModifier = (inUseByte & 0xF0L) << 28;
+        
+        // [    ,   x] is super node
+        byte extra = buffer.get();
 
         NodeRecord nodeRecord = new NodeRecord( id );
         nodeRecord.setInUse( inUse );
         nodeRecord.setNextRel( longFromIntAndMod( nextRel, relModifier ) );
         nodeRecord.setNextProp( longFromIntAndMod( nextProp, propModifier ) );
+        nodeRecord.setSuperNode( (extra & 0x1) > 0 );
         return nodeRecord;
     }
 
@@ -248,7 +252,10 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
             // [xxxx,    ] higher bits for prop id
             short inUseUnsignedByte = ( record.inUse() ? Record.IN_USE : Record.NOT_IN_USE ).byteValue();
             inUseUnsignedByte = (short) ( inUseUnsignedByte | relModifier | propModifier );
-            buffer.put( (byte) inUseUnsignedByte ).putInt( (int) nextRel ).putInt( (int) nextProp );
+            
+            // [    ,   x] is super node
+            byte extra = (byte)(record.isSuperNode() ? 0x1 : 0);
+            buffer.put( (byte) inUseUnsignedByte ).putInt( (int) nextRel ).putInt( (int) nextProp ).put( extra );
         }
         else
         {

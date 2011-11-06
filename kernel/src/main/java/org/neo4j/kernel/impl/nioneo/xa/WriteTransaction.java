@@ -56,6 +56,8 @@ import org.neo4j.kernel.impl.nioneo.store.PropertyRecord;
 import org.neo4j.kernel.impl.nioneo.store.PropertyStore;
 import org.neo4j.kernel.impl.nioneo.store.PropertyType;
 import org.neo4j.kernel.impl.nioneo.store.Record;
+import org.neo4j.kernel.impl.nioneo.store.RelationshipGroupRecord;
+import org.neo4j.kernel.impl.nioneo.store.RelationshipGroupStore;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipStore;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipTypeData;
@@ -88,6 +90,8 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         new HashMap<Integer,RelationshipTypeRecord>();
     private final Map<Integer,PropertyIndexRecord> propIndexRecords =
         new HashMap<Integer,PropertyIndexRecord>();
+    private final Map<Long, RelationshipGroupRecord> relGroupRecords =
+        new HashMap<Long, RelationshipGroupRecord>();
 
     private final ArrayList<Command.NodeCommand> nodeCommands =
         new ArrayList<Command.NodeCommand>();
@@ -99,6 +103,8 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         new ArrayList<Command.RelationshipCommand>();
     private final ArrayList<Command.RelationshipTypeCommand> relTypeCommands =
         new ArrayList<Command.RelationshipTypeCommand>();
+    private final ArrayList<Command.RelationshipGroupCommand> relGroupCommands =
+        new ArrayList<Command.RelationshipGroupCommand>();
 
     private final NeoStore neoStore;
     private boolean committed = false;
@@ -124,7 +130,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         {
             if ( nodeCommands.size() == 0 && propCommands.size() == 0 &&
                 relCommands.size() == 0 && relTypeCommands.size() == 0 &&
-                propIndexCommands.size() == 0 )
+                propIndexCommands.size() == 0 && relGroupCommands.size() == 0 )
             {
                 return true;
             }
@@ -132,7 +138,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         }
         if ( nodeRecords.size() == 0 && relRecords.size() == 0 &&
             relTypeRecords.size() == 0 && propertyRecords.size() == 0 &&
-            propIndexRecords.size() == 0 )
+            propIndexRecords.size() == 0 && relGroupRecords.size() == 0 )
         {
             return true;
         }
@@ -212,6 +218,12 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             propCommands.add( command );
             addCommand( command );
         }
+        for ( RelationshipGroupRecord record : relGroupRecords.values() )
+        {
+            Command.RelationshipGroupCommand command = new Command.RelationshipGroupCommand( neoStore.getRelationshipGroupStore(), record );
+            relGroupCommands.add( command );
+            addCommand( command );
+        }
     }
 
     @Override
@@ -236,6 +248,10 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         else if ( xaCommand instanceof Command.RelationshipTypeCommand )
         {
             relTypeCommands.add( (Command.RelationshipTypeCommand) xaCommand );
+        }
+        else if ( xaCommand instanceof Command.RelationshipGroupCommand )
+        {
+            relGroupCommands.add( (Command.RelationshipGroupCommand) xaCommand );
         }
         else
         {
@@ -286,6 +302,13 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                     getRelationshipStore().freeId( record.getId() );
                 }
                 removeRelationshipFromCache( record.getId() );
+            }
+            for ( RelationshipGroupRecord record : relGroupRecords.values() )
+            {
+                if ( freeIds == record.isCreated() )
+                {
+                    getRelationshipGroupStore().freeId( record.getId() );
+                }
             }
             for ( PropertyIndexRecord record : propIndexRecords.values() )
             {
@@ -344,17 +367,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         }
         finally
         {
-            nodeRecords.clear();
-            propertyRecords.clear();
-            relRecords.clear();
-            relTypeRecords.clear();
-            propIndexRecords.clear();
-
-            nodeCommands.clear();
-            propCommands.clear();
-            propIndexCommands.clear();
-            relCommands.clear();
-            relTypeCommands.clear();
+            clearContainers();
         }
     }
 
@@ -447,25 +460,15 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             java.util.Collections.sort( nodeCommands, sorter );
             java.util.Collections.sort( relCommands, sorter );
             java.util.Collections.sort( propCommands, sorter );
-            executeCreated( propCommands, relCommands, nodeCommands );
-            executeModified( propCommands, relCommands, nodeCommands );
-            executeDeleted( propCommands, relCommands, nodeCommands );
+            executeCreated( propCommands, relCommands, nodeCommands, relGroupCommands );
+            executeModified( propCommands, relCommands, nodeCommands, relGroupCommands );
+            executeDeleted( propCommands, relCommands, nodeCommands, relGroupCommands );
             lockReleaser.commitCows();
             neoStore.setLastCommittedTx( getCommitTxId() );
         }
         finally
         {
-            nodeRecords.clear();
-            propertyRecords.clear();
-            relRecords.clear();
-            relTypeRecords.clear();
-            propIndexRecords.clear();
-
-            nodeCommands.clear();
-            propCommands.clear();
-            propIndexCommands.clear();
-            relCommands.clear();
-            relTypeCommands.clear();
+            clearContainers();
         }
     }
 
@@ -551,6 +554,10 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
                 command.execute();
                 removeNodeFromCache( command.getKey() );
             }
+            for ( Command.RelationshipGroupCommand command : relGroupCommands )
+            {
+                command.execute();
+            }
             neoStore.setRecoveredStatus( true );
             try
             {
@@ -564,18 +571,25 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         }
         finally
         {
-            nodeRecords.clear();
-            propertyRecords.clear();
-            relRecords.clear();
-            relTypeRecords.clear();
-            propIndexRecords.clear();
-
-            nodeCommands.clear();
-            propCommands.clear();
-            propIndexCommands.clear();
-            relCommands.clear();
-            relTypeCommands.clear();
+            clearContainers();
         }
+    }
+
+    private void clearContainers()
+    {
+        nodeRecords.clear();
+        propertyRecords.clear();
+        relRecords.clear();
+        relTypeRecords.clear();
+        propIndexRecords.clear();
+        relGroupRecords.clear();
+
+        nodeCommands.clear();
+        propCommands.clear();
+        propIndexCommands.clear();
+        relCommands.clear();
+        relTypeCommands.clear();
+        relGroupCommands.clear();
     }
 
 
@@ -614,6 +628,11 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         return neoStore.getRelationshipStore();
     }
 
+    private RelationshipGroupStore getRelationshipGroupStore()
+    {
+        return neoStore.getRelationshipGroupStore();
+    }
+    
     private PropertyStore getPropertyStore()
     {
         return neoStore.getPropertyStore();
@@ -668,6 +687,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         nodeRecord.setInUse( false );
         long nextProp = nodeRecord.getNextProp();
         ArrayMap<Integer, PropertyData> propertyMap = getAndDeletePropertyChain( nextProp );
+        // TODO delete relgroup if any
         return propertyMap;
     }
 

@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
 import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
 import org.neo4j.kernel.impl.MyRelTypes;
 
@@ -67,16 +68,21 @@ public class TestRelationshipCount extends AbstractNeo4jTestCase
         
         Node node = getGraphDb().createNode();
         assertEquals( 0, node.getRelationshipCount() );
-        node.createRelationshipTo( node, MyRelTypes.TEST );
+        Relationship rel1 = node.createRelationshipTo( node, MyRelTypes.TEST );
         assertEquals( 1, node.getRelationshipCount() );
         Node otherNode = getGraphDb().createNode();
-        node.createRelationshipTo( otherNode, MyRelTypes.TEST2 );
+        Relationship rel2 = node.createRelationshipTo( otherNode, MyRelTypes.TEST2 );
         assertEquals( 2, node.getRelationshipCount() );
         assertEquals( 1, otherNode.getRelationshipCount() );
         newTransaction();
         assertEquals( 2, node.getRelationshipCount() );
-        node.createRelationshipTo( node, MyRelTypes.TEST_TRAVERSAL );
+        Relationship rel3 = node.createRelationshipTo( node, MyRelTypes.TEST_TRAVERSAL );
         assertEquals( 3, node.getRelationshipCount() );
         assertEquals( 1, otherNode.getRelationshipCount() );
+        rel2.delete();
+        assertEquals( 2, node.getRelationshipCount() );
+        assertEquals( 0, otherNode.getRelationshipCount() );
+        rel3.delete();
+        assertEquals( 1, node.getRelationshipCount() );
     }
 }

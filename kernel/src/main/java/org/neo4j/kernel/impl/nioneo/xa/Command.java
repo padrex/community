@@ -36,6 +36,8 @@ import org.neo4j.kernel.impl.nioneo.store.PropertyRecord;
 import org.neo4j.kernel.impl.nioneo.store.PropertyStore;
 import org.neo4j.kernel.impl.nioneo.store.PropertyType;
 import org.neo4j.kernel.impl.nioneo.store.Record;
+import org.neo4j.kernel.impl.nioneo.store.RelationshipGroupRecord;
+import org.neo4j.kernel.impl.nioneo.store.RelationshipGroupStore;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipStore;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipTypeRecord;
@@ -284,6 +286,7 @@ public abstract class Command extends XaCommand
     private static final byte REL_COMMAND = (byte) 3;
     private static final byte REL_TYPE_COMMAND = (byte) 4;
     private static final byte PROP_INDEX_COMMAND = (byte) 5;
+    private static final byte REL_GROUP_COMMAND = (byte) 6;
 
     static class NodeCommand extends Command
     {
@@ -1008,6 +1011,85 @@ public abstract class Command extends XaCommand
                 return false;
             }
             return getKey() == ((Command) o).getKey();
+        }
+    }
+    
+    static class RelationshipGroupCommand extends Command
+    {
+        private final RelationshipGroupStore store;
+        private final RelationshipGroupRecord record;
+
+        RelationshipGroupCommand( RelationshipGroupStore store, RelationshipGroupRecord record )
+        {
+            super( record.getId() );
+            this.store = store;
+            this.record = record;
+        }
+
+        @Override
+        public void accept( CommandRecordVisitor visitor )
+        {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        boolean isCreated()
+        {
+            return record.isCreated();
+        }
+
+        @Override
+        boolean isDeleted()
+        {
+            return !record.inUse();
+        }
+
+        @Override
+        public void execute()
+        {
+            if ( isRecovered() )
+            {
+                logger.fine( this.toString() );
+                store.updateRecord( record, true );
+            }
+            else
+            {
+                store.updateRecord( record );
+            }
+        }
+
+        @Override
+        public void writeToFile( LogBuffer buffer ) throws IOException
+        {
+            buffer.put( REL_GROUP_COMMAND );
+            buffer.putLong( record.getId() );
+            buffer.put( (byte) (record.inUse() ? Record.IN_USE.intValue() : Record.NOT_IN_USE.intValue()) );
+            buffer.putLong( record.getNext() );
+            buffer.putLong( record.getNextOut() );
+            buffer.putLong( record.getNextIn() );
+            buffer.putLong( record.getNextLoop() );
+        }
+        
+        public static Command readCommand( NeoStore neoStore, ReadableByteChannel byteChannel, ByteBuffer buffer ) throws IOException
+        {
+            buffer.clear();
+            buffer.limit( 41 );
+            if ( byteChannel.read( buffer ) != buffer.limit() ) return null;
+            buffer.flip();
+            long id = buffer.getLong();
+            byte inUseByte = buffer.get();
+            boolean inUse = inUseByte == Record.IN_USE.byteValue();
+            if ( inUseByte != Record.IN_USE.byteValue() && inUseByte != Record.NOT_IN_USE.byteValue() )
+            {
+                throw new IOException( "Illegal in use flag: " + inUseByte );
+            }
+            RelationshipGroupRecord record = new RelationshipGroupRecord( id );
+            record.setInUse( inUse );
+            record.setNext( buffer.getLong() );
+            record.setNextOut( buffer.getLong() );
+            record.setNextIn( buffer.getLong() );
+            record.setNextLoop( buffer.getLong() );
+            return new RelationshipGroupCommand( neoStore.getRelationshipGroupStore(), record );
         }
     }
 

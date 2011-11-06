@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.nioneo.store;
 public class NodeRecord extends PrimitiveRecord
 {
     private long nextRel = Record.NO_NEXT_RELATIONSHIP.intValue();
+    private boolean superNode;
 
     public NodeRecord( long id )
     {
@@ -42,6 +43,16 @@ public class NodeRecord extends PrimitiveRecord
     public String toString()
     {
         return new StringBuilder( "Node[" ).append( getId() ).append( ",used=" ).append( inUse() ).append( ",rel=" ).append(
-                nextRel ).append( ",prop=" ).append( getNextProp() ).append( "]" ).toString();
+                nextRel ).append( ",prop=" ).append( getNextProp() ).append( "]" ).append( superNode?"superNode":"" ).toString();
+    }
+
+    public void setSuperNode( boolean superNode )
+    {
+        this.superNode = superNode;
+    }
+    
+    public boolean isSuperNode()
+    {
+        return superNode;
     }
 }
