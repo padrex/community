@@ -22,14 +22,18 @@ package org.neo4j.kernel.impl.nioneo.xa;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import javax.transaction.xa.XAResource;
 
-import org.neo4j.helpers.Pair;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.kernel.impl.core.PerTypeChainPosition;
 import org.neo4j.kernel.impl.core.PropertyIndex;
+import org.neo4j.kernel.impl.core.RelationshipLoadingPosition;
+import org.neo4j.kernel.impl.core.SingleChainPosition;
 import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
@@ -42,6 +46,8 @@ import org.neo4j.kernel.impl.nioneo.store.PropertyIndexStore;
 import org.neo4j.kernel.impl.nioneo.store.PropertyRecord;
 import org.neo4j.kernel.impl.nioneo.store.PropertyStore;
 import org.neo4j.kernel.impl.nioneo.store.Record;
+import org.neo4j.kernel.impl.nioneo.store.RelationshipGroupRecord;
+import org.neo4j.kernel.impl.nioneo.store.RelationshipGroupStore;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipStore;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipTypeData;
@@ -75,6 +81,11 @@ class ReadTransaction implements NeoStoreTransaction
         return neoStore.getRelationshipStore();
     }
 
+    private RelationshipGroupStore getRelationshipGroupStore()
+    {
+        return neoStore.getRelationshipGroupStore();
+    }
+    
     private PropertyStore getPropertyStore()
     {
         return neoStore.getPropertyStore();
@@ -93,20 +104,48 @@ class ReadTransaction implements NeoStoreTransaction
     }
 
     @Override
-    public long getRelationshipChainPosition( long nodeId )
+    public RelationshipLoadingPosition getRelationshipChainPosition( long nodeId )
     {
-        return getNodeStore().getRecord( nodeId ).getNextRel();
+        return getRelationshipChainPosition( nodeId, neoStore );
+    }
+    
+    static RelationshipLoadingPosition getRelationshipChainPosition( long nodeId, NeoStore neoStore )
+    {
+        NodeRecord node = neoStore.getNodeStore().getRecord( nodeId );
+        if ( node.isSuperNode() )
+        {
+            return new PerTypeChainPosition( loadRelationshipGroups( node, neoStore.getRelationshipGroupStore() ) );
+        }
+        else
+        {
+            return new SingleChainPosition( node.getNextRel() );
+        }
     }
 
+    static Map<Integer, RelationshipGroupRecord> loadRelationshipGroups( NodeRecord node, RelationshipGroupStore groupStore )
+    {
+        assert node.isSuperNode();
+        long groupId = node.getNextRel();
+        Map<Integer, RelationshipGroupRecord> result = new HashMap<Integer, RelationshipGroupRecord>();
+        while ( groupId != Record.NO_NEXT_RELATIONSHIP.intValue() )
+        {
+            RelationshipGroupRecord record = groupStore.getRecord( groupId );
+            result.put( record.getType(), record );
+            groupId = record.getNext();
+        }
+        return result;
+    }
+    
     @Override
-    public Pair<Map<DirectionWrapper, Iterable<RelationshipRecord>>, Long> getMoreRelationships(
-            long nodeId, long position )
+    public Map<DirectionWrapper, Iterable<RelationshipRecord>> getMoreRelationships( long nodeId,
+            RelationshipLoadingPosition position, RelationshipType[] types )
     {
-        return getMoreRelationships( nodeId, position, getRelGrabSize(), getRelationshipStore() );
+        return getMoreRelationships( nodeId, position, getRelGrabSize(), getRelationshipStore(), types );
     }
 
-    static Pair<Map<DirectionWrapper, Iterable<RelationshipRecord>>, Long> getMoreRelationships(
-            long nodeId, long position, int grabSize, RelationshipStore relStore )
+    static Map<DirectionWrapper, Iterable<RelationshipRecord>> getMoreRelationships(
+            long nodeId, RelationshipLoadingPosition loadPosition, int grabSize, RelationshipStore relStore,
+            RelationshipType... types )
     {
         // initialCapacity=grabSize saves the lists the trouble of resizing
         List<RelationshipRecord> out = new ArrayList<RelationshipRecord>();
@@ -116,6 +155,7 @@ class ReadTransaction implements NeoStoreTransaction
             new EnumMap<DirectionWrapper, Iterable<RelationshipRecord>>( DirectionWrapper.class );
         result.put( DirectionWrapper.OUTGOING, out );
         result.put( DirectionWrapper.INCOMING, in );
+        long position = loadPosition.position( types );
         for ( int i = 0; i < grabSize &&
             position != Record.NO_NEXT_RELATIONSHIP.intValue(); i++ )
         {
@@ -123,7 +163,7 @@ class ReadTransaction implements NeoStoreTransaction
             if ( relRecord == null )
             {
                 // return what we got so far
-                return Pair.of( result, position );
+                return result;
             }
             long firstNode = relRecord.getFirstNode();
             long secondNode = relRecord.getSecondNode();
@@ -154,13 +194,14 @@ class ReadTransaction implements NeoStoreTransaction
                 i--;
             }
 
+            long next = 0;
             if ( firstNode == nodeId )
             {
-                position = relRecord.getFirstNextRel();
+                next = relRecord.getFirstNextRel();
             }
             else if ( secondNode == nodeId )
             {
-                position = relRecord.getSecondNextRel();
+                next = relRecord.getSecondNextRel();
             }
             else
             {
@@ -168,8 +209,9 @@ class ReadTransaction implements NeoStoreTransaction
                     "] is neither firstNode[" + firstNode +
                     "] nor secondNode[" + secondNode + "] for Relationship[" + relRecord.getId() + "]" );
             }
+            position = loadPosition.nextPosition( next, types );
         }
-        return Pair.of( result, position );
+        return result;
     }
 
     static List<PropertyRecord> getPropertyRecordChain(

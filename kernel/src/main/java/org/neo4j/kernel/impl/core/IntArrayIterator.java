@@ -40,7 +40,7 @@ class IntArrayIterator extends PrefetchingIterator<Relationship> implements Iter
     private final NodeImpl fromNode;
     private final DirectionWrapper direction;
     private final NodeManager nodeManager;
-    private final RelationshipType types[];
+    private final RelationshipType[] types;
     private final List<RelIdIterator> rels;
     
     // This is just for optimization
@@ -88,7 +88,7 @@ class IntArrayIterator extends PrefetchingIterator<Relationship> implements Iter
                 {
                     currentTypeIterator = typeIterator.next();
                 }
-                else if ( fromNode.getMoreRelationships( nodeManager ) ||
+                else if ( fromNode.getMoreRelationships( nodeManager, types ) ||
                         // This is here to guard for that someone else might have loaded
                         // stuff in this relationship chain (and exhausted it) while I
                         // iterated over my batch of relationships. It will only happen

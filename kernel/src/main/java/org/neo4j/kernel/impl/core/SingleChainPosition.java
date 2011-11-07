@@ -19,28 +19,39 @@
  */
 package org.neo4j.kernel.impl.core;
 
-import org.junit.Test;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
-import org.neo4j.kernel.impl.MyRelTypes;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.kernel.impl.nioneo.store.Record;
 
-public class TestSuperNodes extends AbstractNeo4jTestCase
+public class SingleChainPosition implements RelationshipLoadingPosition
 {
-    @Test
-    public void convertToSuperNode() throws Exception
+    private long position;
+    
+    public SingleChainPosition( long firstPosition )
     {
-        Node node = getGraphDb().createNode();
-        for ( int i = 0; i < 101; i++ )
-        {
-            node.createRelationshipTo( getGraphDb().createNode(), MyRelTypes.values()[i%MyRelTypes.values().length] );
-        }
-        newTransaction();
-        clearCache();
-        
-        for ( Relationship rel : node.getRelationships( MyRelTypes.TEST2 ) )
-        {
-            System.out.println( rel );
-        }
+        this.position = firstPosition;
+    }
+    
+    @Override
+    public long position( RelationshipType... types )
+    {
+        return this.position;
+    }
+
+    @Override
+    public long nextPosition( long nextRel, RelationshipType... types )
+    {
+        this.position = nextRel;
+        return nextRel;
+    }
+    
+    @Override
+    public boolean hasMore()
+    {
+        return position != Record.NO_NEXT_RELATIONSHIP.intValue();
+    }
+    
+    @Override
+    public void setNodeManager( NodeManager nodeManager )
+    {
     }
 }

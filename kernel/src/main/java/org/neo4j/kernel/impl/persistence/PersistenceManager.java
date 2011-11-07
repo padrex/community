@@ -32,10 +32,11 @@ import javax.transaction.TransactionManager;
 import javax.transaction.xa.XAResource;
 
 import org.neo4j.graphdb.NotInTransactionException;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.TransactionFailureException;
-import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.impl.core.LockReleaser;
 import org.neo4j.kernel.impl.core.PropertyIndex;
+import org.neo4j.kernel.impl.core.RelationshipLoadingPosition;
 import org.neo4j.kernel.impl.core.TransactionEventsSyncHook;
 import org.neo4j.kernel.impl.core.TxEventSyncHookFactory;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
@@ -97,15 +98,15 @@ public class PersistenceManager
         return getReadOnlyResourceIfPossible().loadPropertyIndexes( maxCount );
     }
 
-    public long getRelationshipChainPosition( long nodeId )
+    public RelationshipLoadingPosition getRelationshipChainPosition( long nodeId )
     {
         return getReadOnlyResourceIfPossible().getRelationshipChainPosition( nodeId );
     }
 
-    public Pair<Map<DirectionWrapper, Iterable<RelationshipRecord>>, Long> getMoreRelationships(
-            long nodeId, long position )
+    public Map<DirectionWrapper, Iterable<RelationshipRecord>> getMoreRelationships(
+            long nodeId, RelationshipLoadingPosition position, RelationshipType[] types )
     {
-        return getReadOnlyResource().getMoreRelationships( nodeId, position );
+        return getReadOnlyResource().getMoreRelationships( nodeId, position, types );
     }
 
     public ArrayMap<Integer,PropertyData> loadNodeProperties( long nodeId,

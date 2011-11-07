@@ -21,25 +21,21 @@ package org.neo4j.kernel.impl.nioneo.store;
 
 public class RelationshipGroupRecord extends Abstract64BitRecord
 {
-    private int type;
+    private final int type;
     private long next = Record.NO_NEXT_RELATIONSHIP.intValue();
     private long nextOut = Record.NO_NEXT_RELATIONSHIP.intValue();
     private long nextIn = Record.NO_NEXT_RELATIONSHIP.intValue();
     private long nextLoop = Record.NO_NEXT_RELATIONSHIP.intValue();
     
-    public RelationshipGroupRecord( long id )
+    public RelationshipGroupRecord( long id, int type )
     {
         super( id );
+        this.type = type;
     }
     
     public int getType()
     {
         return type;
-    }
-    
-    public void setType( int type )
-    {
-        this.type = type;
     }
     
     public long getNextOut()
@@ -85,7 +81,7 @@ public class RelationshipGroupRecord extends Abstract64BitRecord
     @Override
     public String toString()
     {
-        return new StringBuilder( getClass().getSimpleName() + "[" )
+        return new StringBuilder( "RelationshipGroup[" )
                 .append( "type=" + type + "," )
                 .append( "out=" + nextOut + "," )
                 .append( "in=" + nextIn + "," )

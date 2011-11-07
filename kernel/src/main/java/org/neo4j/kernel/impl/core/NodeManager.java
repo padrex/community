@@ -601,34 +601,36 @@ public class NodeManager
         return persistenceManager.loadPropertyValue( property );
     }
 
-    long getRelationshipChainPosition( NodeImpl node )
+    RelationshipLoadingPosition getRelationshipChainPosition( NodeImpl node )
     {
-        return persistenceManager.getRelationshipChainPosition( node.getId() );
+        RelationshipLoadingPosition result = persistenceManager.getRelationshipChainPosition( node.getId() );
+        result.setNodeManager( this );
+        return result;
     }
 
-    Triplet<ArrayMap<String,RelIdArray>,Map<Long,RelationshipImpl>,Long> getMoreRelationships( NodeImpl node )
+    Pair<ArrayMap<String,RelIdArray>,Map<Long,RelationshipImpl>> getMoreRelationships( NodeImpl node, RelationshipType[] types )
     {
         long nodeId = node.getId();
-        long position = node.getRelChainPosition();
-        Pair<Map<DirectionWrapper, Iterable<RelationshipRecord>>, Long> rels =
-            persistenceManager.getMoreRelationships( nodeId, position );
+        RelationshipLoadingPosition position = node.getRelChainPosition();
+        Map<DirectionWrapper, Iterable<RelationshipRecord>> rels =
+            persistenceManager.getMoreRelationships( nodeId, position, types );
         ArrayMap<String,RelIdArray> newRelationshipMap =
             new ArrayMap<String,RelIdArray>();
         Map<Long,RelationshipImpl> relsMap = new HashMap<Long,RelationshipImpl>( 150 );
 
-        Iterable<RelationshipRecord> loops = rels.first().get( DirectionWrapper.BOTH );
+        Iterable<RelationshipRecord> loops = rels.get( DirectionWrapper.BOTH );
         boolean hasLoops = loops != null;
         if ( hasLoops )
         {
             receiveRelationships( loops, newRelationshipMap, relsMap, DirectionWrapper.BOTH, true );
         }
-        receiveRelationships( rels.first().get( DirectionWrapper.OUTGOING ), newRelationshipMap,
+        receiveRelationships( rels.get( DirectionWrapper.OUTGOING ), newRelationshipMap,
                 relsMap, DirectionWrapper.OUTGOING, hasLoops );
-        receiveRelationships( rels.first().get( DirectionWrapper.INCOMING ), newRelationshipMap,
+        receiveRelationships( rels.get( DirectionWrapper.INCOMING ), newRelationshipMap,
                 relsMap, DirectionWrapper.INCOMING, hasLoops );
 
         // relCache.putAll( relsMap );
-        return Triplet.of( newRelationshipMap, relsMap, rels.other() );
+        return Triplet.of( newRelationshipMap, relsMap );
     }
 
     private void receiveRelationships(

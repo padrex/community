@@ -83,8 +83,8 @@ public class RelationshipGroupStore extends AbstractStore implements Store, Reco
         // [ xxx,    ] high firstLoop bits
         long highByte = buffer.get();
         
-        long nextLowBits = buffer.getUnsignedInt();
         int type = buffer.getShort();
+        long nextLowBits = buffer.getUnsignedInt();
         long nextOutLowBits = buffer.getUnsignedInt();
         long nextInLowBits = buffer.getUnsignedInt();
         long nextLoopLowBits = buffer.getUnsignedInt();
@@ -94,9 +94,8 @@ public class RelationshipGroupStore extends AbstractStore implements Store, Reco
         long nextInMod = (highByte & 0xE) << 31;
         long nextLoopMod = (highByte & 0x70) << 28;
         
-        RelationshipGroupRecord record = new RelationshipGroupRecord( id );
+        RelationshipGroupRecord record = new RelationshipGroupRecord( id, type );
         record.setInUse( true );
-        record.setType( type );
         record.setNext( longFromIntAndMod( nextLowBits, nextMod ) );
         record.setNextOut( longFromIntAndMod( nextOutLowBits, nextOutMod ) );
         record.setNextIn( longFromIntAndMod( nextInLowBits, nextInMod ) );
@@ -181,7 +180,7 @@ public class RelationshipGroupStore extends AbstractStore implements Store, Reco
         }
         catch ( InvalidRecordException e )
         {
-            return new RelationshipGroupRecord( id );
+            return new RelationshipGroupRecord( id, -1 );
         }
         
         try

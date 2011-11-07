@@ -19,28 +19,15 @@
  */
 package org.neo4j.kernel.impl.core;
 
-import org.junit.Test;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
-import org.neo4j.kernel.impl.MyRelTypes;
+import org.neo4j.graphdb.RelationshipType;
 
-public class TestSuperNodes extends AbstractNeo4jTestCase
+public interface RelationshipLoadingPosition
 {
-    @Test
-    public void convertToSuperNode() throws Exception
-    {
-        Node node = getGraphDb().createNode();
-        for ( int i = 0; i < 101; i++ )
-        {
-            node.createRelationshipTo( getGraphDb().createNode(), MyRelTypes.values()[i%MyRelTypes.values().length] );
-        }
-        newTransaction();
-        clearCache();
-        
-        for ( Relationship rel : node.getRelationships( MyRelTypes.TEST2 ) )
-        {
-            System.out.println( rel );
-        }
-    }
+    long position( RelationshipType... types );
+    
+    long nextPosition( long position, RelationshipType... types );
+    
+    boolean hasMore();
+    
+    void setNodeManager( NodeManager nodeManager );
 }

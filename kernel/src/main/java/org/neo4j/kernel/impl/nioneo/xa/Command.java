@@ -1070,6 +1070,7 @@ public abstract class Command extends XaCommand
             buffer.put( REL_GROUP_COMMAND );
             buffer.putLong( record.getId() );
             buffer.put( (byte) (record.inUse() ? Record.IN_USE.intValue() : Record.NOT_IN_USE.intValue()) );
+            buffer.putShort( (short) record.getType() );
             buffer.putLong( record.getNext() );
             buffer.putLong( record.getNextOut() );
             buffer.putLong( record.getNextIn() );
@@ -1079,7 +1080,7 @@ public abstract class Command extends XaCommand
         public static Command readCommand( NeoStore neoStore, ReadableByteChannel byteChannel, ByteBuffer buffer ) throws IOException
         {
             buffer.clear();
-            buffer.limit( 41 );
+            buffer.limit( 43 );
             if ( byteChannel.read( buffer ) != buffer.limit() ) return null;
             buffer.flip();
             long id = buffer.getLong();
@@ -1089,7 +1090,8 @@ public abstract class Command extends XaCommand
             {
                 throw new IOException( "Illegal in use flag: " + inUseByte );
             }
-            RelationshipGroupRecord record = new RelationshipGroupRecord( id );
+            int type = buffer.getShort();
+            RelationshipGroupRecord record = new RelationshipGroupRecord( id, type );
             record.setInUse( inUse );
             record.setNext( buffer.getLong() );
             record.setNextOut( buffer.getLong() );

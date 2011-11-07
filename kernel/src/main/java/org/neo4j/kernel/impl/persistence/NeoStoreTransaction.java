@@ -23,8 +23,9 @@ import java.util.Map;
 
 import javax.transaction.xa.XAResource;
 
-import org.neo4j.helpers.Pair;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.kernel.impl.core.PropertyIndex;
+import org.neo4j.kernel.impl.core.RelationshipLoadingPosition;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
 import org.neo4j.kernel.impl.nioneo.store.PropertyIndexData;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
@@ -254,7 +255,7 @@ public interface NeoStoreTransaction
      */
     public void createRelationshipType( int id, String name );
 
-    public long getRelationshipChainPosition( long nodeId );
+    public RelationshipLoadingPosition getRelationshipChainPosition( long nodeId );
 
     /*
      * List<Iterable<RelationshipRecord>> is a list with three items:
@@ -265,8 +266,8 @@ public interface NeoStoreTransaction
      * Long is the relationship chain position as it stands after this
      * batch of relationships has been loaded.
      */
-    public Pair<Map<DirectionWrapper, Iterable<RelationshipRecord>>, Long> getMoreRelationships(
-            long nodeId, long position );
+    public Map<DirectionWrapper, Iterable<RelationshipRecord>> getMoreRelationships(
+            long nodeId, RelationshipLoadingPosition position, RelationshipType[] types );
 
     /**
      * Returns an array view of the ids of the nodes that have been created in
