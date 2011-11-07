@@ -1057,6 +1057,12 @@ public abstract class Command extends XaCommand
                 store.updateRecord( record );
             }
         }
+        
+        @Override
+        public String toString()
+        {
+            return record.toString();
+        }
 
         @Override
         public void writeToFile( LogBuffer buffer ) throws IOException
@@ -1089,7 +1095,7 @@ public abstract class Command extends XaCommand
             record.setNextOut( buffer.getLong() );
             record.setNextIn( buffer.getLong() );
             record.setNextLoop( buffer.getLong() );
-            return new RelationshipGroupCommand( neoStore.getRelationshipGroupStore(), record );
+            return new RelationshipGroupCommand( neoStore != null ? neoStore.getRelationshipGroupStore() : null, record );
         }
     }
 
@@ -1120,6 +1126,8 @@ public abstract class Command extends XaCommand
             case REL_TYPE_COMMAND:
                 return RelationshipTypeCommand.readCommand( neoStore,
                     byteChannel, buffer );
+            case REL_GROUP_COMMAND:
+                return RelationshipGroupCommand.readCommand( neoStore, byteChannel, buffer );
             case NONE: return null;
             default:
                 throw new IOException( "Unknown command type[" + commandType

@@ -19,6 +19,9 @@
  */
 package org.neo4j.kernel.impl;
 
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.kernel.Config.KEEP_LOGICAL_LOGS;
+
 import java.io.File;
 import java.lang.reflect.Field;
 
@@ -72,7 +75,7 @@ public abstract class AbstractNeo4jTestCase
     public static void setUpDb()
     {
         deleteFileOrDirectory( new File( getStorePath( "neo-test" ) ) );
-        graphDb = new EmbeddedGraphDatabase( getStorePath( "neo-test" ) );
+        graphDb = new EmbeddedGraphDatabase( getStorePath( "neo-test" ), stringMap( KEEP_LOGICAL_LOGS, "true" ) );
     }
 
     @Before

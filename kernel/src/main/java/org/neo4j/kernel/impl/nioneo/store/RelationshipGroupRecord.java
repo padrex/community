@@ -81,4 +81,15 @@ public class RelationshipGroupRecord extends Abstract64BitRecord
     {
         this.next = next;
     }
+    
+    @Override
+    public String toString()
+    {
+        return new StringBuilder( getClass().getSimpleName() + "[" )
+                .append( "type=" + type + "," )
+                .append( "out=" + nextOut + "," )
+                .append( "in=" + nextIn + "," )
+                .append( "loop=" + nextLoop + "," )
+                .append( "next=" + next ).toString();
+    }
 }
