@@ -34,6 +34,7 @@ import org.neo4j.kernel.impl.util.StringLogger;
 public class RelationshipStore extends AbstractStore implements Store, RecordStore<RelationshipRecord>
 {
     public static final String TYPE_DESCRIPTOR = "RelationshipStore";
+    public static final String FILE_NAME = ".relationshipstore.db";
 
     // record header size
     // in_use(byte)+first_node(int)+second_node(int)+rel_type(int)+

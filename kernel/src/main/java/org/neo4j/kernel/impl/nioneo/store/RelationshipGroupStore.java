@@ -35,6 +35,7 @@ public class RelationshipGroupStore extends AbstractStore implements Store, Reco
      */
     public static final int RECORD_SIZE = 20;
     public static final String TYPE_DESCRIPTOR = "RelationshipGroupStore";
+    public static final String FILE_NAME = ".relationshipgroupstore.db";
     
     public RelationshipGroupStore( String fileName, Map<?, ?> config, IdType idType )
     {

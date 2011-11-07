@@ -156,12 +156,12 @@ public class NeoStore extends AbstractStore
      */
     private void instantiateChildStores()
     {
-        relTypeStore = new RelationshipTypeStore( getStorageFileName() + ".relationshiptypestore.db",
+        relTypeStore = new RelationshipTypeStore( getStorageFileName() + RelationshipTypeStore.FILE_NAME,
                 getConfig(), IdType.RELATIONSHIP_TYPE );
-        propStore = new PropertyStore( getStorageFileName() + ".propertystore.db", getConfig() );
-        relStore = new RelationshipStore( getStorageFileName() + ".relationshipstore.db", getConfig() );
-        nodeStore = new NodeStore( getStorageFileName() + ".nodestore.db", getConfig() );
-        relGroupStore = new RelationshipGroupStore( getStorageFileName() + ".relgroupstore.db",
+        propStore = new PropertyStore( getStorageFileName() + PropertyStore.FILE_NAME, getConfig() );
+        relStore = new RelationshipStore( getStorageFileName() + RelationshipStore.FILE_NAME, getConfig() );
+        nodeStore = new NodeStore( getStorageFileName() + NodeStore.FILE_NAME, getConfig() );
+        relGroupStore = new RelationshipGroupStore( getStorageFileName() + RelationshipGroupStore.FILE_NAME,
                 getConfig(), IdType.RELATIONSHIP_GROUP );
     }
 
@@ -259,12 +259,11 @@ public class NeoStore extends AbstractStore
         if ( storeId == null ) storeId = new StoreId();
 
         createEmptyStore( fileName, buildTypeDescriptorAndVersion( TYPE_DESCRIPTOR ), idGeneratorFactory );
-        NodeStore.createStore( fileName + ".nodestore.db", config );
-        RelationshipStore.createStore( fileName + ".relationshipstore.db", idGeneratorFactory );
-        PropertyStore.createStore( fileName + ".propertystore.db", config );
-        RelationshipTypeStore.createStore( fileName
-            + ".relationshiptypestore.db", config );
-        RelationshipGroupStore.createStore( fileName + ".relgroupstore.db", idGeneratorFactory );
+        NodeStore.createStore( fileName + NodeStore.FILE_NAME, config );
+        RelationshipStore.createStore( fileName + RelationshipStore.FILE_NAME, idGeneratorFactory );
+        PropertyStore.createStore( fileName + PropertyStore.FILE_NAME, config );
+        RelationshipTypeStore.createStore( fileName + RelationshipTypeStore.FILE_NAME, config );
+        RelationshipGroupStore.createStore( fileName + RelationshipGroupStore.FILE_NAME, idGeneratorFactory );
         if ( !config.containsKey( "neo_store" ) )
         {
             // TODO Ugly

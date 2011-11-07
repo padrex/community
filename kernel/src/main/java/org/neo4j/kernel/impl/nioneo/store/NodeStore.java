@@ -33,6 +33,7 @@ import org.neo4j.kernel.impl.util.StringLogger;
 public class NodeStore extends AbstractStore implements Store, RecordStore<NodeRecord>
 {
     public static final String TYPE_DESCRIPTOR = "NodeStore";
+    public static final String FILE_NAME = ".nodestore.db";
 
     // in_use(byte)+next_rel_id(int)+next_prop_id(int)+extra
     public static final int RECORD_SIZE = 10;

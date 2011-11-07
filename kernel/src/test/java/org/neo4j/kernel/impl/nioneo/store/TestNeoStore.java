@@ -194,57 +194,27 @@ public class TestNeoStore extends AbstractNeo4jTestCase
     @After
     public void tearDownNeoStore()
     {
-        File file = new File( file( "neo" ) );
-        file.delete();
-        file = new File( file( "neo.id" ) );
-        file.delete();
-        file = new File( file( "neo.nodestore.db" ) );
-        file.delete();
-        file = new File( file( "neo.nodestore.db.id" ) );
-        file.delete();
-        file = new File( file( "neo.propertystore.db" ) );
-        file.delete();
-        file = new File( file( "neo.propertystore.db.id" ) );
-        file.delete();
-        file = new File( file( "neo.propertystore.db.index" ) );
-        file.delete();
-        file = new File( file( "neo.propertystore.db.index.id" ) );
-        file.delete();
-        file = new File( file( "neo.propertystore.db.index.keys" ) );
-        file.delete();
-        file = new File( file( "neo.propertystore.db.index.keys.id" ) );
-        file.delete();
-        file = new File( file( "neo.propertystore.db.strings" ) );
-        file.delete();
-        file = new File( file( "neo.propertystore.db.strings.id" ) );
-        file.delete();
-        file = new File( file( "neo.propertystore.db.arrays" ) );
-        file.delete();
-        file = new File( file( "neo.propertystore.db.arrays.id" ) );
-        file.delete();
-        file = new File( file( "neo.relationshipstore.db" ) );
-        file.delete();
-        file = new File( file( "neo.relationshipstore.db.id" ) );
-        file.delete();
-        file = new File( file( "neo.relationshiptypestore.db" ) );
-        file.delete();
-        file = new File( file( "neo.relationshiptypestore.db.id" ) );
-        file.delete();
-        file = new File( file( "neo.relationshiptypestore.db.names" ) );
-        file.delete();
-        file = new File( file( "neo.relationshiptypestore.db.names.id" ) );
-        file.delete();
-        file = new File( file( "neo.relgroupstore.db" ) );
-        file.delete();
-        file = new File( file( "neo.relgroupstore.db.id" ) );
-        file.delete();
-        file = new File( "." );
-        for ( File nioFile : file.listFiles() )
+        deleteFiles( "neo", NodeStore.FILE_NAME, PropertyStore.FILE_NAME, PropertyStore.FILE_NAME + ".index",
+                PropertyStore.FILE_NAME + ".index.keys", PropertyStore.FILE_NAME + ".keys", PropertyStore.FILE_NAME + ".strings",
+                PropertyStore.FILE_NAME + ".arrays", RelationshipStore.FILE_NAME, RelationshipTypeStore.FILE_NAME,
+                RelationshipTypeStore.FILE_NAME + ".names", RelationshipGroupStore.FILE_NAME );
+        for ( File nioFile : new File( "." ).listFiles() )
         {
             if ( nioFile.getName().startsWith( "nioneo_logical.log" ) )
             {
                 nioFile.delete();
             }
+        }
+    }
+
+    private void deleteFiles( String base, String... stores )
+    {
+        new File( file( base ) ).delete();
+        new File( file( base + ".id" ) ).delete();
+        for ( String store : stores )
+        {
+            new File( file( base + store ) ).delete();
+            new File( file( base + store + ".id" ) ).delete();
         }
     }
 
