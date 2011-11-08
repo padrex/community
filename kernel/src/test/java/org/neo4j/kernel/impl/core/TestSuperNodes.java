@@ -19,17 +19,23 @@
  */
 package org.neo4j.kernel.impl.core;
 
+import static org.junit.Assert.assertEquals;
+import static org.neo4j.helpers.collection.IteratorUtil.addToCollection;
+import static org.neo4j.helpers.collection.MapUtil.stringMap;
+import static org.neo4j.test.TargetDirectory.forTest;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.helpers.collection.MapUtil;
-import org.neo4j.kernel.Config;
 import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.impl.MyRelTypes;
-import org.neo4j.test.TargetDirectory;
 
 public class TestSuperNodes
 {
@@ -38,14 +44,20 @@ public class TestSuperNodes
     @BeforeClass
     public static void doBefore() throws Exception
     {
-        db = new EmbeddedGraphDatabase( TargetDirectory.forTest( TestSuperNodes.class ).graphDbDir( true ).getAbsolutePath(),
-                MapUtil.stringMap( Config.RELATIONSHIP_GRAB_SIZE, "5" ) );
+        db = new EmbeddedGraphDatabase( forTest( TestSuperNodes.class ).graphDbDir( true ).getAbsolutePath(),
+                stringMap( "super_node_threshold", "5" ) );
     }
     
     @AfterClass
     public static void doAfter() throws Exception
     {
         db.shutdown();
+    }
+    
+    @After
+    public void afterTest() throws Exception
+    {
+        if ( tx != null ) commitTx();
     }
     
     private Transaction tx;
@@ -84,10 +96,11 @@ public class TestSuperNodes
     {
         beginTx();
         Node node = db.createNode();
+        Set<Relationship> expectedRels = new HashSet<Relationship>();
         for ( int i = 0; i < 20; i++ )
         {
             Relationship rel = node.createRelationshipTo( db.createNode(), MyRelTypes.values()[i%MyRelTypes.values().length] );
-            System.out.println( "+" + rel + ", " + rel.getType().name() );
+            if ( rel.isType( MyRelTypes.TEST2 ) ) expectedRels.add( rel );
         }
         restartTx();
         for ( int i = 0; i < 100000; i++ )
@@ -96,10 +109,6 @@ public class TestSuperNodes
             if ( i%10000 == 0 && i > 0 ) restartTx();
         }
         clearCache();
-        
-        for ( Relationship rel : node.getRelationships( MyRelTypes.TEST2 ) )
-        {
-            System.out.println( rel + ", " + rel.getType().name() );
-        }
+        assertEquals( expectedRels, addToCollection( node.getRelationships( MyRelTypes.TEST2 ), new HashSet<Relationship>() ) );
     }
 }

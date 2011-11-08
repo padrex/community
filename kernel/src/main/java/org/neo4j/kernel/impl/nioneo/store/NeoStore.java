@@ -19,6 +19,8 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
+import static java.lang.Integer.parseInt;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -74,24 +76,27 @@ public class NeoStore extends AbstractStore
     private long lastCommittedTx = -1;
 
     private final int REL_GRAB_SIZE;
+    private final int SUPER_NODE_THRESHOLD;
 
     public NeoStore( Map<?,?> config )
     {
         super( (String) config.get( "neo_store" ), config, IdType.NEOSTORE_BLOCK );
-        int relGrabSize = DEFAULT_REL_GRAB_SIZE;
-        if ( getConfig() != null )
-        {
-            String grabSize = (String) getConfig().get( Config.RELATIONSHIP_GRAB_SIZE );
-            if ( grabSize != null )
-            {
-                relGrabSize = Integer.parseInt( grabSize );
-            }
-        }
-        REL_GRAB_SIZE = relGrabSize;
+        REL_GRAB_SIZE = getIntFromConfig( config, Config.RELATIONSHIP_GRAB_SIZE, DEFAULT_REL_GRAB_SIZE );
+        SUPER_NODE_THRESHOLD = getIntFromConfig( config, "super_node_threshold", REL_GRAB_SIZE/2 );
         lastCommittedTxIdSetter = (LastCommittedTxIdSetter)
                 config.get( LastCommittedTxIdSetter.class );
         idGeneratorFactory = (IdGeneratorFactory) config.get( IdGeneratorFactory.class );
         txHook = (TxHook) config.get( TxHook.class );
+    }
+
+    private int getIntFromConfig( Map<?, ?> config, String key, int defaultValue )
+    {
+        if ( config != null )
+        {
+            String stringValue = (String) getConfig().get( key );
+            if ( stringValue != null ) return parseInt( stringValue );
+        }
+        return defaultValue;
     }
 
     @Override
@@ -582,6 +587,11 @@ public class NeoStore extends AbstractStore
     public int getRelationshipGrabSize()
     {
         return REL_GRAB_SIZE;
+    }
+    
+    public int getSuperNodeThreshold()
+    {
+        return SUPER_NODE_THRESHOLD;
     }
 
     @Override

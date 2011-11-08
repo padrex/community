@@ -233,16 +233,11 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
         nodeRecord.setNextRel( longFromIntAndMod( nextRel, relModifier ) );
         nodeRecord.setNextProp( longFromIntAndMod( nextProp, propModifier ) );
         nodeRecord.setSuperNode( (extra & 0x1) > 0 );
-        
-        System.out.println( "got record " + nodeRecord );
-        
         return nodeRecord;
     }
 
     private void updateRecord( NodeRecord record, PersistenceWindow window, boolean force )
     {
-        System.out.println( "updateRecord " + record );
-        
         long id = record.getId();
         Buffer buffer = window.getOffsettedBuffer( id );
         if ( record.inUse() || force )

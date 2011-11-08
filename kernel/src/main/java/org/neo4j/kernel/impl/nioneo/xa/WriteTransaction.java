@@ -84,7 +84,6 @@ import org.neo4j.kernel.impl.util.RelIdArray.DirectionWrapper;
  */
 public class WriteTransaction extends XaTransaction implements NeoStoreTransaction
 {
-    private static final int SUPER_NODE_THRESHOLD = 5;
     private final Map<Long,NodeRecord> nodeRecords =
         new HashMap<Long,NodeRecord>();
     private final Map<Long, PropertyRecord> propertyRecords = new HashMap<Long, PropertyRecord>();
@@ -1391,7 +1390,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         {
             RelationshipRecord rel = getRelationshipRecord( relId, true );
             int count = (int) (node.getId() == rel.getFirstNode() ? rel.getFirstPrevRel() : rel.getSecondPrevRel());
-            if ( count >= SUPER_NODE_THRESHOLD ) convertToSuperNode( node, rel, chain );
+            if ( count >= neoStore.getSuperNodeThreshold() ) convertToSuperNode( node, rel, chain );
         }
     }
 
