@@ -19,28 +19,82 @@
  */
 package org.neo4j.kernel.impl.core;
 
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.helpers.collection.MapUtil;
+import org.neo4j.kernel.Config;
+import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.impl.MyRelTypes;
+import org.neo4j.test.TargetDirectory;
 
-public class TestSuperNodes extends AbstractNeo4jTestCase
+public class TestSuperNodes
 {
+    private static EmbeddedGraphDatabase db;
+    
+    @BeforeClass
+    public static void doBefore() throws Exception
+    {
+        db = new EmbeddedGraphDatabase( TargetDirectory.forTest( TestSuperNodes.class ).graphDbDir( true ).getAbsolutePath(),
+                MapUtil.stringMap( Config.RELATIONSHIP_GRAB_SIZE, "5" ) );
+    }
+    
+    @AfterClass
+    public static void doAfter() throws Exception
+    {
+        db.shutdown();
+    }
+    
+    private Transaction tx;
+    
+    protected void beginTx()
+    {
+        assert tx == null;
+        tx = db.beginTx();
+    }
+    
+    protected void finishTx( boolean success )
+    {
+        assert tx != null;
+        if ( success ) tx.success();
+        tx.finish();
+    }
+    
+    protected void commitTx()
+    {
+        finishTx( true );
+    }
+    
+    protected void restartTx()
+    {
+        finishTx( true );
+        beginTx();
+    }
+    
+    protected void clearCache()
+    {
+        db.getConfig().getGraphDbModule().getNodeManager().clearCache();
+    }
+    
     @Test
     public void convertToSuperNode() throws Exception
     {
-        Node node = getGraphDb().createNode();
-        for ( int i = 0; i < 101; i++ )
+        beginTx();
+        Node node = db.createNode();
+        for ( int i = 0; i < 20; i++ )
         {
-            node.createRelationshipTo( getGraphDb().createNode(), MyRelTypes.values()[i%MyRelTypes.values().length] );
+            Relationship rel = node.createRelationshipTo( db.createNode(), MyRelTypes.values()[i%MyRelTypes.values().length] );
+            System.out.println( "+" + rel + ", " + rel.getType().name() );
         }
-        newTransaction();
+        commitTx();
         clearCache();
         
         for ( Relationship rel : node.getRelationships( MyRelTypes.TEST2 ) )
         {
-            System.out.println( rel );
+            System.out.println( rel + ", " + rel.getType().name() );
         }
     }
 }

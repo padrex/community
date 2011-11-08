@@ -37,6 +37,7 @@ import org.neo4j.kernel.impl.core.SingleChainPosition;
 import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
+import org.neo4j.kernel.impl.nioneo.store.NodeState;
 import org.neo4j.kernel.impl.nioneo.store.NodeStore;
 import org.neo4j.kernel.impl.nioneo.store.PropertyBlock;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
@@ -92,7 +93,7 @@ class ReadTransaction implements NeoStoreTransaction
     }
 
     @Override
-    public boolean nodeLoadLight( long nodeId )
+    public NodeState nodeLoadLight( long nodeId )
     {
         return getNodeStore().loadLightNode( nodeId );
     }
@@ -160,6 +161,7 @@ class ReadTransaction implements NeoStoreTransaction
             position != Record.NO_NEXT_RELATIONSHIP.intValue(); i++ )
         {
             RelationshipRecord relRecord = relStore.getChainRecord( position );
+            System.out.println( "got chain record " + relRecord );
             if ( relRecord == null )
             {
                 // return what we got so far

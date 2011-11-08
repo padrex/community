@@ -26,6 +26,7 @@ import javax.transaction.xa.XAResource;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.kernel.impl.core.PropertyIndex;
 import org.neo4j.kernel.impl.core.RelationshipLoadingPosition;
+import org.neo4j.kernel.impl.nioneo.store.NodeState;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
 import org.neo4j.kernel.impl.nioneo.store.PropertyIndexData;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
@@ -168,7 +169,7 @@ public interface NeoStoreTransaction
      * @param id The id of the node to load.
      * @return True iff the node record can be found.
      */
-    public boolean nodeLoadLight( long id );
+    public NodeState nodeLoadLight( long id );
 
     /**
      * Attempts to load the value off the store forthe given PropertyData

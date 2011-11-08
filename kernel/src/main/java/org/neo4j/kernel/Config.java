@@ -205,6 +205,13 @@ public class Config
      */
     @Documented
     public static final String RELATIONSHIP_AUTO_INDEXING = "relationship_auto_indexing";
+    
+    /**
+     * Number of relationships to load each time a new batch of relationships
+     * will be loaded from the store files for a Node.
+     */
+    @Documented
+    public static final String RELATIONSHIP_GRAB_SIZE = "relationship_grab_size";
 
     static final String LOAD_EXTENSIONS = "load_kernel_extensions";
 

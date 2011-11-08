@@ -377,7 +377,7 @@ public class TestNeoStore extends AbstractNeo4jTestCase
             PropertyData prop2, PropertyData prop3, long rel1, long rel2,
             int relType1, int relType2 ) throws IOException
     {
-        assertTrue( xaCon.getWriteTransaction().nodeLoadLight( node ) );
+        assertTrue( xaCon.getWriteTransaction().nodeLoadLight( node ).exists() );
         ArrayMap<Integer,PropertyData> props = xaCon.getWriteTransaction().nodeLoadProperties( node,
                 false );
         int count = 0;
@@ -450,7 +450,7 @@ public class TestNeoStore extends AbstractNeo4jTestCase
             PropertyData prop2, PropertyData prop3,
         long rel1, long rel2, int relType1, int relType2 ) throws IOException
     {
-        assertTrue( xaCon.getWriteTransaction().nodeLoadLight( node ) );
+        assertTrue( xaCon.getWriteTransaction().nodeLoadLight( node ).exists() );
         ArrayMap<Integer,PropertyData> props = xaCon.getWriteTransaction().nodeLoadProperties( node,
                 false );
         int count = 0;

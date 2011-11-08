@@ -168,8 +168,8 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
             releaseWindow( window );
         }
     }
-
-    public boolean loadLightNode( long id )
+    
+    public NodeState loadLightNode( long id )
     {
         PersistenceWindow window = null;
         try
@@ -178,8 +178,8 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
         }
         catch ( InvalidRecordException e )
         {
-            // ok id to high
-            return false;
+            // OK, id too high
+            return NodeState.NON_EXISTENT;
         }
 
         try
@@ -187,9 +187,9 @@ public class NodeStore extends AbstractStore implements Store, RecordStore<NodeR
             NodeRecord record = getRecord( id, window, RecordLoad.CHECK );
             if ( record == null )
             {
-                return false;
+                return NodeState.NON_EXISTENT;
             }
-            return true;
+            return record.isSuperNode() ? NodeState.SUPER : NodeState.NORMAL;
         }
         finally
         {

@@ -46,6 +46,7 @@ import org.neo4j.kernel.impl.nioneo.store.DynamicRecord;
 import org.neo4j.kernel.impl.nioneo.store.InvalidRecordException;
 import org.neo4j.kernel.impl.nioneo.store.NeoStore;
 import org.neo4j.kernel.impl.nioneo.store.NodeRecord;
+import org.neo4j.kernel.impl.nioneo.store.NodeState;
 import org.neo4j.kernel.impl.nioneo.store.NodeStore;
 import org.neo4j.kernel.impl.nioneo.store.PrimitiveRecord;
 import org.neo4j.kernel.impl.nioneo.store.PropertyBlock;
@@ -668,12 +669,12 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     }
 
     @Override
-    public boolean nodeLoadLight( long nodeId )
+    public NodeState nodeLoadLight( long nodeId )
     {
         NodeRecord nodeRecord = getCachedNodeRecord( nodeId );
         if ( nodeRecord != null )
         {
-            return true;
+            return nodeRecord.isSuperNode() ? NodeState.SUPER : NodeState.NORMAL;
         }
         return getNodeStore().loadLightNode( nodeId );
     }

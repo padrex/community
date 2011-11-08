@@ -39,6 +39,7 @@ import org.neo4j.kernel.impl.core.PropertyIndex;
 import org.neo4j.kernel.impl.core.RelationshipLoadingPosition;
 import org.neo4j.kernel.impl.core.TransactionEventsSyncHook;
 import org.neo4j.kernel.impl.core.TxEventSyncHookFactory;
+import org.neo4j.kernel.impl.nioneo.store.NodeState;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
 import org.neo4j.kernel.impl.nioneo.store.PropertyIndexData;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
@@ -78,7 +79,7 @@ public class PersistenceManager
         return persistenceSource;
     }
 
-    public boolean loadLightNode( long id )
+    public NodeState loadLightNode( long id )
     {
         return getReadOnlyResourceIfPossible().nodeLoadLight( id );
     }

@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
+import org.neo4j.kernel.Config;
 import org.neo4j.kernel.IdGeneratorFactory;
 import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.impl.core.LastCommittedTxIdSetter;
@@ -80,7 +81,7 @@ public class NeoStore extends AbstractStore
         int relGrabSize = DEFAULT_REL_GRAB_SIZE;
         if ( getConfig() != null )
         {
-            String grabSize = (String) getConfig().get( "relationship_grab_size" );
+            String grabSize = (String) getConfig().get( Config.RELATIONSHIP_GRAB_SIZE );
             if ( grabSize != null )
             {
                 relGrabSize = Integer.parseInt( grabSize );

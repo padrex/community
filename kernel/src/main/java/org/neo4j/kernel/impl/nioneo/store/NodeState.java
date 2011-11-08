@@ -17,30 +17,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.kernel.impl.core;
+package org.neo4j.kernel.impl.nioneo.store;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.neo4j.helpers.Pair;
-import org.neo4j.kernel.impl.util.ArrayMap;
-import org.neo4j.kernel.impl.util.RelIdArray;
-
-public class SuperNodeImpl extends NodeImpl
+public enum NodeState
 {
-    SuperNodeImpl( long id, boolean newNode )
+    NORMAL( true ),
+    SUPER( true ),
+    NON_EXISTENT( false );
+    
+    private final boolean exists;
+    
+    private NodeState( boolean exists )
     {
-        super( id, newNode );
+        this.exists = exists;
     }
-
-    SuperNodeImpl( long id )
+    
+    public boolean exists()
     {
-        super( id );
-    }
-
-    protected Pair<ArrayMap<String,RelIdArray>,Map<Long,RelationshipImpl>> getInitialRelationships(
-            NodeManager nodeManager, ArrayMap<String,RelIdArray> tmpRelMap )
-    {
-        return Pair.<ArrayMap<String,RelIdArray>,Map<Long,RelationshipImpl>>of( new ArrayMap<String, RelIdArray>(), new HashMap<Long, RelationshipImpl>() );
+        return exists;
     }
 }

@@ -48,6 +48,7 @@ import org.neo4j.kernel.impl.cache.NoCache;
 import org.neo4j.kernel.impl.cache.SoftLruCache;
 import org.neo4j.kernel.impl.cache.StrongReferenceCache;
 import org.neo4j.kernel.impl.cache.WeakLruCache;
+import org.neo4j.kernel.impl.nioneo.store.NodeState;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
 import org.neo4j.kernel.impl.nioneo.store.PropertyIndexData;
 import org.neo4j.kernel.impl.nioneo.store.RelationshipRecord;
@@ -414,11 +415,9 @@ public class NodeManager
             {
                 return new NodeProxy( nodeId, this );
             }
-            if ( !persistenceManager.loadLightNode( nodeId ) )
-            {
-                throw new NotFoundException( "Node[" + nodeId + "]" );
-            }
-            node = new NodeImpl( nodeId );
+            NodeState state = persistenceManager.loadLightNode( nodeId );
+            if ( !state.exists() ) throw new NotFoundException( "Node[" + nodeId + "]" );
+            node = state == NodeState.NORMAL ? new NodeImpl( nodeId ) : new SuperNodeImpl( nodeId );
             nodeCache.put( nodeId, node );
             return new NodeProxy( nodeId, this );
         }
@@ -430,31 +429,7 @@ public class NodeManager
 
     NodeImpl getLightNode( long nodeId )
     {
-        NodeImpl node = nodeCache.get( nodeId );
-        if ( node != null )
-        {
-            return node;
-        }
-        ReentrantLock loadLock = lockId( nodeId );
-        try
-        {
-            node = nodeCache.get( nodeId );
-            if ( node != null )
-            {
-                return node;
-            }
-            if ( !persistenceManager.loadLightNode( nodeId ) )
-            {
-                return null;
-            }
-            node = new NodeImpl( nodeId );
-            nodeCache.put( nodeId, node );
-            return node;
-        }
-        finally
-        {
-            loadLock.unlock();
-        }
+        return getNodeForProxy( nodeId );
     }
 
     NodeImpl getNodeForProxy( long nodeId )
@@ -472,11 +447,9 @@ public class NodeManager
             {
                 return node;
             }
-            if ( !persistenceManager.loadLightNode( nodeId ) )
-            {
-                throw new NotFoundException( "Node[" + nodeId + "] not found." );
-            }
-            node = new NodeImpl( nodeId );
+            NodeState state = persistenceManager.loadLightNode( nodeId );
+            if ( !state.exists() ) throw new NotFoundException( "Node[" + nodeId + "] not found." );
+            node = state == NodeState.NORMAL ? new NodeImpl( nodeId ) : new SuperNodeImpl( nodeId );
             nodeCache.put( nodeId, node );
             return node;
         }

@@ -418,10 +418,7 @@ public class BatchInserterImpl implements BatchInserter
         }
         long nodeId = id;
         NodeStore nodeStore = neoStore.getNodeStore();
-        if ( neoStore.getNodeStore().loadLightNode( nodeId ) )
-        {
-            throw new IllegalArgumentException( "id=" + id + " already in use" );
-        }
+        if ( !nodeExists( nodeId ) ) throw new IllegalArgumentException( "id=" + id + " already in use" );
         long highId = nodeStore.getHighId();
         if ( highId <= id )
         {
@@ -535,7 +532,7 @@ public class BatchInserterImpl implements BatchInserter
 
     public boolean nodeExists( long nodeId )
     {
-        return neoStore.getNodeStore().loadLightNode( nodeId );
+        return neoStore.getNodeStore().loadLightNode( nodeId ).exists();
     }
 
     public Map<String,Object> getNodeProperties( long nodeId )

@@ -332,7 +332,7 @@ class NodeImpl extends Primitive
             {
                 this.relChainPosition = nodeManager.getRelationshipChainPosition( this );
                 ArrayMap<String,RelIdArray> tmpRelMap = new ArrayMap<String,RelIdArray>();
-                rels = getMoreRelationships( nodeManager, tmpRelMap );
+                rels = getInitialRelationships( nodeManager, tmpRelMap );
                 this.relationships = toRelIdArray( tmpRelMap );
             }
         }
@@ -358,7 +358,7 @@ class NodeImpl extends Primitive
         return result;
     }
 
-    private Pair<ArrayMap<String,RelIdArray>,Map<Long,RelationshipImpl>> getMoreRelationships(
+    protected Pair<ArrayMap<String,RelIdArray>,Map<Long,RelationshipImpl>> getInitialRelationships(
             NodeManager nodeManager, ArrayMap<String,RelIdArray> tmpRelMap )
     {
         if ( !hasMoreRelationshipsToLoad() )
