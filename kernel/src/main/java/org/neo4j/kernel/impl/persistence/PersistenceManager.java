@@ -31,6 +31,7 @@ import javax.transaction.Transaction;
 import javax.transaction.TransactionManager;
 import javax.transaction.xa.XAResource;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.NotInTransactionException;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.TransactionFailureException;
@@ -402,8 +403,8 @@ public class PersistenceManager
         return getReadOnlyResourceIfPossible().getKeyIdForProperty( property );
     }
 
-    public int getRelationshipCount( long id )
+    public int getRelationshipCount( long id, int type, Direction direction )
     {
-        return getReadOnlyResourceIfPossible().getRelationshipCount( id );
+        return getReadOnlyResourceIfPossible().getRelationshipCount( id, type, direction );
     }
 }

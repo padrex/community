@@ -235,9 +235,27 @@ public class ReadOnlyGraphDatabaseProxy implements GraphDatabaseService, IndexMa
         }
         
         @Override
-        public int getRelationshipCount()
+        public int getDegree()
         {
-            return actual.getRelationshipCount();
+            return actual.getDegree();
+        }
+        
+        @Override
+        public int getDegree( RelationshipType type )
+        {
+            return actual.getDegree( type );
+        }
+        
+        @Override
+        public int getDegree( Direction direction )
+        {
+            return actual.getDegree( direction );
+        }
+        
+        @Override
+        public int getDegree( RelationshipType type, Direction direction )
+        {
+            return actual.getDegree( type, direction );
         }
 
         public boolean hasRelationship()

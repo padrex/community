@@ -199,9 +199,27 @@ class NodeProxy implements Node
     }
     
     @Override
-    public int getRelationshipCount()
+    public int getDegree()
     {
-        return nm.getNodeForProxy( nodeId ).getRelationshipCount( nm );
+        return nm.getNodeForProxy( nodeId ).getDegree( nm );
+    }
+    
+    @Override
+    public int getDegree( RelationshipType type )
+    {
+        return nm.getNodeForProxy( nodeId ).getDegree( nm, type );
+    }
+    
+    @Override
+    public int getDegree( Direction direction )
+    {
+        return nm.getNodeForProxy( nodeId ).getDegree( nm, direction );
+    }
+    
+    @Override
+    public int getDegree( RelationshipType type, Direction direction )
+    {
+        return nm.getNodeForProxy( nodeId ).getDegree( nm, type, direction );
     }
 
     /* Tentative expansion API

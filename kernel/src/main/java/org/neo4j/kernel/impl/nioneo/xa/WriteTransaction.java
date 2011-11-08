@@ -34,6 +34,7 @@ import java.util.Map;
 import javax.transaction.xa.XAException;
 import javax.transaction.xa.XAResource;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -83,7 +84,7 @@ import org.neo4j.kernel.impl.util.RelIdArray.DirectionWrapper;
  */
 public class WriteTransaction extends XaTransaction implements NeoStoreTransaction
 {
-    private static final int SUPER_NODE_THRESHOLD = 100;
+    private static final int SUPER_NODE_THRESHOLD = 5;
     private final Map<Long,NodeRecord> nodeRecords =
         new HashMap<Long,NodeRecord>();
     private final Map<Long, PropertyRecord> propertyRecords = new HashMap<Long, PropertyRecord>();
@@ -1407,6 +1408,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             relRecord = getRelationshipRecord( relId, true );
         }
         node.setSuperNode( true );
+        lockReleaser.removeNodeFromCache( node.getId() );
     }
 
     private void connectRelationship( NodeRecord firstNode,
@@ -2044,16 +2046,89 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     }
     
     @Override
-    public int getRelationshipCount( long id )
+    public int getRelationshipCount( long id, int type, Direction direction )
     {
-        NodeRecord node = getCachedNodeRecord( id );
-        if ( node == null ) node = getNodeStore().getRecord( id );
+        NodeRecord node = getNodeRecord( id, true );
         long nextRel = node.getNextRel();
         if ( nextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ) return 0;
-        RelationshipRecord rel = getCachedRelationshipRecord( nextRel );
-        if ( rel == null ) rel = getRelationshipStore().getRecord( nextRel );
-        return (int) (id == rel.getFirstNode() ? rel.getFirstPrevRel() : rel.getSecondPrevRel());
+        if ( !node.isSuperNode() )
+        {
+            assert type == -1;
+            assert direction == null;
+            return getRelationshipCount( node, nextRel );
+        }
+        else
+        {
+            Map<Integer, RelationshipGroupRecord> groups = getRelationshipGroups( node );
+            if ( type == -1 && direction == null )
+            {   // Count for all types/directions
+                int count = 0;
+                for ( RelationshipGroupRecord group : groups.values() )
+                {
+                    count += getRelationshipCount( node, group.getNextOut() );
+                    count += getRelationshipCount( node, group.getNextIn() );
+                    count += getRelationshipCount( node, group.getNextLoop() );
+                }
+                return count;
+            }
+            else if ( type == -1 )
+            {   // Count for all types with a given direction
+                int count = 0;
+                for ( RelationshipGroupRecord group : groups.values() )
+                {
+                    count += getRelationshipCount( node, group, direction );
+                }
+                return count;
+            }
+            else if ( direction == null )
+            {   // Count for a type
+                RelationshipGroupRecord group = groups.get( type );
+                if ( group == null ) return 0;
+                int count = 0;
+                count += getRelationshipCount( node, group.getNextOut() );
+                count += getRelationshipCount( node, group.getNextIn() );
+                count += getRelationshipCount( node, group.getNextLoop() );
+                return count;
+            }
+            else
+            {   // Count for one type and direction
+                RelationshipGroupRecord group = groups.get( type );
+                if ( group == null ) return 0;
+                return getRelationshipCount( node, group, direction );
+            }
+        }
     }
+    
+    private int getRelationshipCount( NodeRecord node, RelationshipGroupRecord group, Direction direction )
+    {
+        long relId = -1;
+        switch ( direction )
+        {
+        case OUTGOING: relId = group.getNextOut(); break;
+        case INCOMING: relId = group.getNextIn(); break;
+        default: relId = group.getNextLoop(); break;
+        }
+        return getRelationshipCount( node, relId );
+    }
+
+    private int getRelationshipCount( NodeRecord node, long relId )
+    {
+        if ( relId == Record.NO_NEXT_RELATIONSHIP.intValue() ) return 0;
+        RelationshipRecord rel = getRelationshipRecord( relId, true );
+        return (int) (node.getId() == rel.getFirstNode() ? rel.getFirstPrevRel() : rel.getSecondPrevRel());
+    }
+    
+//    @Override
+//    public int getRelationshipCount( long id )
+//    {
+//        NodeRecord node = getCachedNodeRecord( id );
+//        if ( node == null ) node = getNodeStore().getRecord( id );
+//        long nextRel = node.getNextRel();
+//        if ( nextRel == Record.NO_NEXT_RELATIONSHIP.intValue() ) return 0;
+//        RelationshipRecord rel = getCachedRelationshipRecord( nextRel );
+//        if ( rel == null ) rel = getRelationshipStore().getRecord( nextRel );
+//        return (int) (id == rel.getFirstNode() ? rel.getFirstPrevRel() : rel.getSecondPrevRel());
+//    }
     
     public static enum RelChain
     {

@@ -640,8 +640,26 @@ class NodeImpl extends Primitive
         return relationships;
     }
 
-    public int getRelationshipCount( NodeManager nm )
+    public int getDegree( NodeManager nm )
     {
-        return nm.getRelationshipCount( this );
+        return nm.getRelationshipCount( this, null, null );
+    }
+
+    public int getDegree( NodeManager nm, RelationshipType type )
+    {
+        // TODO count manually
+        throw new UnsupportedOperationException();
+    }
+
+    public int getDegree( NodeManager nm, Direction direction )
+    {
+        // TODO count manually
+        throw new UnsupportedOperationException();
+    }
+    
+    public int getDegree( NodeManager nm, RelationshipType type, Direction direction )
+    {
+        // TODO count manually
+        throw new UnsupportedOperationException();
     }
 }

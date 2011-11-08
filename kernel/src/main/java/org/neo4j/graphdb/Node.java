@@ -259,11 +259,31 @@ public interface Node extends PropertyContainer
             Direction dir );
     
     /**
-     * Returns the number of relationships for this node in O(1) time.
-     * @return the number of relationships for this node in O(1) time.
+     * Returns the number of relationships for this node.
+     * @return the number of relationships for this node.
      */
-    public int getRelationshipCount();
-
+    public int getDegree();
+    
+    /**
+     * Returns the number of relationships of a given {@code type} for this node.
+     * @return the number of relationships of a given {@code type} for this node.
+     */
+    public int getDegree( RelationshipType type );
+    
+    /**
+     * Returns the number of relationships of a given {@code direction} for this node.
+     * @return the number of relationships of a given {@code direction} for this node.
+     */
+    public int getDegree( Direction direction );
+    
+    /**
+     * Returns the number of relationships of a given {@code type} and {@code direction}
+     * for this node.
+     * @return the number of relationships of a given {@code type} and {@code direction}
+     * for this node.
+     */
+    public int getDegree( RelationshipType type, Direction direction );
+    
     /**
      * Creates a relationship between this node and another node. The
      * relationship is of type <code>type</code>. It starts at this node and

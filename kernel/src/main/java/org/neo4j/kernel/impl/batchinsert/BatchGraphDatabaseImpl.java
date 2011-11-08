@@ -282,7 +282,25 @@ class BatchGraphDatabaseImpl implements GraphDatabaseService
         }
         
         @Override
-        public int getRelationshipCount()
+        public int getDegree()
+        {
+            throw new UnsupportedOperationException();
+        }
+        
+        @Override
+        public int getDegree( RelationshipType type )
+        {
+            throw new UnsupportedOperationException();
+        }
+        
+        @Override
+        public int getDegree( Direction direction )
+        {
+            throw new UnsupportedOperationException();
+        }
+        
+        @Override
+        public int getDegree( RelationshipType type, Direction direction )
         {
             throw new UnsupportedOperationException();
         }

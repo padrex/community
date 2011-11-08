@@ -70,7 +70,7 @@ public class TestSuperNodes
     
     protected void restartTx()
     {
-        finishTx( true );
+        commitTx();
         beginTx();
     }
     
@@ -89,7 +89,12 @@ public class TestSuperNodes
             Relationship rel = node.createRelationshipTo( db.createNode(), MyRelTypes.values()[i%MyRelTypes.values().length] );
             System.out.println( "+" + rel + ", " + rel.getType().name() );
         }
-        commitTx();
+        restartTx();
+        for ( int i = 0; i < 100000; i++ )
+        {
+            node.createRelationshipTo( db.createNode(), MyRelTypes.TEST );
+            if ( i%10000 == 0 && i > 0 ) restartTx();
+        }
         clearCache();
         
         for ( Relationship rel : node.getRelationships( MyRelTypes.TEST2 ) )

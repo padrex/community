@@ -22,6 +22,8 @@ package org.neo4j.kernel.impl.core;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.impl.util.ArrayMap;
 import org.neo4j.kernel.impl.util.RelIdArray;
@@ -42,5 +44,23 @@ public class SuperNodeImpl extends NodeImpl
             NodeManager nodeManager, ArrayMap<String,RelIdArray> tmpRelMap )
     {
         return Pair.<ArrayMap<String,RelIdArray>,Map<Long,RelationshipImpl>>of( new ArrayMap<String, RelIdArray>(), new HashMap<Long, RelationshipImpl>() );
+    }
+    
+    @Override
+    public int getDegree( NodeManager nm, RelationshipType type )
+    {
+        return nm.getRelationshipCount( this, type, null );
+    }
+    
+    @Override
+    public int getDegree( NodeManager nm, Direction direction )
+    {
+        return nm.getRelationshipCount( this, null, direction );
+    }
+    
+    @Override
+    public int getDegree( NodeManager nm, RelationshipType type, Direction direction )
+    {
+        return nm.getRelationshipCount( this, type, direction );
     }
 }

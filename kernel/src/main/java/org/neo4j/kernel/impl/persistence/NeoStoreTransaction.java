@@ -23,6 +23,7 @@ import java.util.Map;
 
 import javax.transaction.xa.XAResource;
 
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.kernel.impl.core.PropertyIndex;
 import org.neo4j.kernel.impl.core.RelationshipLoadingPosition;
@@ -306,5 +307,5 @@ public interface NeoStoreTransaction
      */
     public int getKeyIdForProperty( PropertyData property );
 
-    public int getRelationshipCount( long id );
+    public int getRelationshipCount( long id, int type, Direction direction );
 }

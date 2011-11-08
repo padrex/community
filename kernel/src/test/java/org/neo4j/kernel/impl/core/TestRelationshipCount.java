@@ -22,6 +22,7 @@ package org.neo4j.kernel.impl.core;
 import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.kernel.impl.AbstractNeo4jTestCase;
@@ -34,29 +35,43 @@ public class TestRelationshipCount extends AbstractNeo4jTestCase
     {
         Node node1 = getGraphDb().createNode();
         Node node2 = getGraphDb().createNode();
-        assertEquals( 0, node1.getRelationshipCount() );
-        assertEquals( 0, node2.getRelationshipCount() );
+        assertEquals( 0, node1.getDegree() );
+        assertEquals( 0, node2.getDegree() );
         node1.createRelationshipTo( node2, MyRelTypes.TEST );
-        assertEquals( 1, node1.getRelationshipCount() );
-        assertEquals( 1, node2.getRelationshipCount() );
+        assertEquals( 1, node1.getDegree() );
+        assertEquals( 1, node2.getDegree() );
         node1.createRelationshipTo( getGraphDb().createNode(), MyRelTypes.TEST2 );
-        assertEquals( 2, node1.getRelationshipCount() );
-        assertEquals( 1, node2.getRelationshipCount() );
+        assertEquals( 2, node1.getDegree() );
+        assertEquals( 1, node2.getDegree() );
         newTransaction();
-        assertEquals( 2, node1.getRelationshipCount() );
-        assertEquals( 1, node2.getRelationshipCount() );
+        assertEquals( 2, node1.getDegree() );
+        assertEquals( 1, node2.getDegree() );
 
         for ( int i = 0; i < 1000; i++ ) 
         {
             if ( i%2 == 0 ) node1.createRelationshipTo( node2, MyRelTypes.TEST );
             else node2.createRelationshipTo( node1, MyRelTypes.TEST );
-            assertEquals( i+2+1, node1.getRelationshipCount() );
-            assertEquals( i+1+1, node2.getRelationshipCount() );
+            assertEquals( i+2+1, node1.getDegree() );
+            assertEquals( i+1+1, node2.getDegree() );
             if ( i%10 == 0 )
             {
                 newTransaction();
                 clearCache();
             }
+        }
+        
+        for ( int i = 0; i < 2; i++ )
+        {
+            assertEquals( 1002, node1.getDegree() );
+            assertEquals( 502, node1.getDegree( Direction.OUTGOING ) );
+            assertEquals( 500, node1.getDegree( Direction.INCOMING ) );
+            assertEquals( 1, node1.getDegree( MyRelTypes.TEST2 ) );
+            assertEquals( 1001, node1.getDegree( MyRelTypes.TEST ) );
+            assertEquals( 501, node1.getDegree( MyRelTypes.TEST, Direction.OUTGOING ) );
+            assertEquals( 500, node1.getDegree( MyRelTypes.TEST, Direction.INCOMING ) );
+            assertEquals( 1, node1.getDegree( MyRelTypes.TEST2, Direction.OUTGOING ) );
+            assertEquals( 0, node1.getDegree( MyRelTypes.TEST2, Direction.INCOMING ) );
+            newTransaction();
         }
     }
     
@@ -67,22 +82,22 @@ public class TestRelationshipCount extends AbstractNeo4jTestCase
         for ( int i = 0; i < 10; i++ ) getGraphDb().createNode().createRelationshipTo( getGraphDb().createNode(), MyRelTypes.TEST );
         
         Node node = getGraphDb().createNode();
-        assertEquals( 0, node.getRelationshipCount() );
+        assertEquals( 0, node.getDegree() );
         Relationship rel1 = node.createRelationshipTo( node, MyRelTypes.TEST );
-        assertEquals( 1, node.getRelationshipCount() );
+        assertEquals( 1, node.getDegree() );
         Node otherNode = getGraphDb().createNode();
         Relationship rel2 = node.createRelationshipTo( otherNode, MyRelTypes.TEST2 );
-        assertEquals( 2, node.getRelationshipCount() );
-        assertEquals( 1, otherNode.getRelationshipCount() );
+        assertEquals( 2, node.getDegree() );
+        assertEquals( 1, otherNode.getDegree() );
         newTransaction();
-        assertEquals( 2, node.getRelationshipCount() );
+        assertEquals( 2, node.getDegree() );
         Relationship rel3 = node.createRelationshipTo( node, MyRelTypes.TEST_TRAVERSAL );
-        assertEquals( 3, node.getRelationshipCount() );
-        assertEquals( 1, otherNode.getRelationshipCount() );
+        assertEquals( 3, node.getDegree() );
+        assertEquals( 1, otherNode.getDegree() );
         rel2.delete();
-        assertEquals( 2, node.getRelationshipCount() );
-        assertEquals( 0, otherNode.getRelationshipCount() );
+        assertEquals( 2, node.getDegree() );
+        assertEquals( 0, otherNode.getDegree() );
         rel3.delete();
-        assertEquals( 1, node.getRelationshipCount() );
+        assertEquals( 1, node.getDegree() );
     }
 }
