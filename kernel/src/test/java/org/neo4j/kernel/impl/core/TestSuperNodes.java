@@ -113,7 +113,6 @@ public class TestSuperNodes
             if ( i%10000 == 0 && i > 0 ) restartTx();
         }
         clearCache();
-        System.out.println( "there" );
         assertEquals( rels.get( MyRelTypes.TEST2 ),
                 addToCollection( node.getRelationships( MyRelTypes.TEST2 ), new HashSet<Relationship>() ) );
         assertEquals( join( rels.get( MyRelTypes.TEST_TRAVERSAL ), rels.get( MyRelTypes.TEST2 ) ),
