@@ -31,6 +31,7 @@ import org.neo4j.kernel.IdType;
 import org.neo4j.kernel.impl.core.JumpingFileSystemAbstraction.JumpingFileChannel;
 import org.neo4j.kernel.impl.nioneo.store.FileSystemAbstraction;
 import org.neo4j.kernel.impl.nioneo.store.IdGenerator;
+import org.neo4j.kernel.impl.nioneo.store.NodeStore;
 
 public class TestJumpingIdGenerator
 {
@@ -94,8 +95,8 @@ public class TestJumpingIdGenerator
 
     private byte readSomethingLikeNodeRecord( JumpingFileChannel channel, long id ) throws IOException
     {
-        ByteBuffer buffer = ByteBuffer.allocate( 9 );
-        channel.position( id*9 );
+        ByteBuffer buffer = ByteBuffer.allocate( NodeStore.RECORD_SIZE );
+        channel.position( id*NodeStore.RECORD_SIZE );
         channel.read( buffer );
         buffer.flip();
         buffer.getLong();
@@ -104,8 +105,8 @@ public class TestJumpingIdGenerator
 
     private void writeSomethingLikeNodeRecord( JumpingFileChannel channel, long id, int justAByte ) throws IOException
     {
-        channel.position( id*9 );
-        ByteBuffer buffer = ByteBuffer.allocate( 9 );
+        channel.position( id*NodeStore.RECORD_SIZE );
+        ByteBuffer buffer = ByteBuffer.allocate( NodeStore.RECORD_SIZE );
         buffer.putLong( 4321 );
         buffer.put( (byte) justAByte );
         buffer.flip();

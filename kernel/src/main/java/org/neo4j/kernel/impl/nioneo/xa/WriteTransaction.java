@@ -1407,6 +1407,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             relRecord = getRelationshipRecord( relId, true );
         }
         node.setSuperNode( true );
+        // TODO don't do it here
         lockReleaser.removeNodeFromCache( node.getId() );
     }
 
