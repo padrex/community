@@ -138,7 +138,7 @@ class IntArrayIterator extends PrefetchingIterator<Relationship> implements Iter
                     
                     typeIterator = rels.iterator();
                     currentTypeIterator = typeIterator.hasNext() ? typeIterator.next() : RelIdArray.EMPTY.iterator( direction );
-                    isFullyLoaded = !fromNode.hasMoreRelationshipsToLoad();
+                    isFullyLoaded = !fromNode.hasMoreRelationshipsToLoad( types );
                 }
                 else
                 {

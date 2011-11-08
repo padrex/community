@@ -43,7 +43,7 @@ public class NodeRecord extends PrimitiveRecord
     public String toString()
     {
         return new StringBuilder( "Node[" ).append( getId() ).append( ",used=" ).append( inUse() ).append( ",rel=" ).append(
-                nextRel ).append( ",prop=" ).append( getNextProp() ).append( "]" ).append( superNode?"superNode":"" ).toString();
+                nextRel ).append( ",prop=" ).append( getNextProp() ).append( superNode?",superNode":"" ).append( "]" ).toString();
     }
 
     public void setSuperNode( boolean superNode )

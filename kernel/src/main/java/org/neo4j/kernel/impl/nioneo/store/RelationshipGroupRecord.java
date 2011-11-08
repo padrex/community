@@ -81,11 +81,11 @@ public class RelationshipGroupRecord extends Abstract64BitRecord
     @Override
     public String toString()
     {
-        return new StringBuilder( "RelationshipGroup[" )
-                .append( "type=" + type + "," )
-                .append( "out=" + nextOut + "," )
-                .append( "in=" + nextIn + "," )
-                .append( "loop=" + nextLoop + "," )
-                .append( "next=" + next ).toString();
+        return new StringBuilder( "RelationshipGroup[" + getId() )
+                .append( ",type=" + type )
+                .append( ",out=" + nextOut )
+                .append( ",in=" + nextIn )
+                .append( ",loop=" + nextLoop )
+                .append( ",next=" + next ).toString();
     }
 }

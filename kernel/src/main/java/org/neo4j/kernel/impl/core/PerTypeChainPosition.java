@@ -97,11 +97,12 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
     }
     
     @Override
-    public boolean hasMore()
+    public boolean hasMore( RelationshipType... types )
     {
-        for ( Map.Entry<String, RelationshipGroupRecord> entry : groups.entrySet() )
+        if ( types.length == 0 ) types = this.types;
+        for ( RelationshipType type : types )
         {
-            TypePosition position = positions.get( entry.getKey() );
+            TypePosition position = positions.get( type.name() );
             return position == null || position.hasMore();
         }
         return false;
@@ -167,7 +168,7 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
         }
         
         @Override
-        public boolean hasMore()
+        public boolean hasMore( RelationshipType... types )
         {
             return !end;
         }

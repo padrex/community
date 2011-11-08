@@ -24,6 +24,7 @@ import static org.neo4j.helpers.collection.IteratorUtil.addToCollection;
 import static org.neo4j.helpers.collection.MapUtil.stringMap;
 import static org.neo4j.test.TargetDirectory.forTest;
 
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -34,6 +35,7 @@ import org.junit.Test;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.Config;
 import org.neo4j.kernel.EmbeddedGraphDatabase;
 import org.neo4j.kernel.impl.MyRelTypes;
 
@@ -45,7 +47,7 @@ public class TestSuperNodes
     public static void doBefore() throws Exception
     {
         db = new EmbeddedGraphDatabase( forTest( TestSuperNodes.class ).graphDbDir( true ).getAbsolutePath(),
-                stringMap( "super_node_threshold", "5" ) );
+                stringMap( "super_node_threshold", "5", Config.KEEP_LOGICAL_LOGS, "true" ) );
     }
     
     @AfterClass
@@ -96,11 +98,13 @@ public class TestSuperNodes
     {
         beginTx();
         Node node = db.createNode();
-        Set<Relationship> expectedRels = new HashSet<Relationship>();
-        for ( int i = 0; i < 20; i++ )
+        EnumMap<MyRelTypes, Set<Relationship>> rels = new EnumMap<MyRelTypes, Set<Relationship>>( MyRelTypes.class );
+        for ( MyRelTypes type : MyRelTypes.values() ) rels.put( type, new HashSet<Relationship>() );
+        for ( int i = 0; i < 6; i++ )
         {
-            Relationship rel = node.createRelationshipTo( db.createNode(), MyRelTypes.values()[i%MyRelTypes.values().length] );
-            if ( rel.isType( MyRelTypes.TEST2 ) ) expectedRels.add( rel );
+            MyRelTypes type = MyRelTypes.values()[i%MyRelTypes.values().length];
+            Relationship rel = node.createRelationshipTo( db.createNode(), type );
+            rels.get( type ).add( rel );
         }
         restartTx();
         for ( int i = 0; i < 100000; i++ )
@@ -109,6 +113,17 @@ public class TestSuperNodes
             if ( i%10000 == 0 && i > 0 ) restartTx();
         }
         clearCache();
-        assertEquals( expectedRels, addToCollection( node.getRelationships( MyRelTypes.TEST2 ), new HashSet<Relationship>() ) );
+        System.out.println( "there" );
+        assertEquals( rels.get( MyRelTypes.TEST2 ),
+                addToCollection( node.getRelationships( MyRelTypes.TEST2 ), new HashSet<Relationship>() ) );
+        assertEquals( join( rels.get( MyRelTypes.TEST_TRAVERSAL ), rels.get( MyRelTypes.TEST2 ) ),
+                addToCollection( node.getRelationships( MyRelTypes.TEST_TRAVERSAL, MyRelTypes.TEST2 ), new HashSet<Relationship>() ) );
+    }
+
+    private <T> Set<T> join( Set<T>... sets )
+    {
+        Set<T> result = new HashSet<T>();
+        for ( Set<T> set : sets ) result.addAll( set );
+        return result;
     }
 }

@@ -45,7 +45,7 @@ public class SingleChainPosition implements RelationshipLoadingPosition
     }
     
     @Override
-    public boolean hasMore()
+    public boolean hasMore( RelationshipType... types )
     {
         return position != Record.NO_NEXT_RELATIONSHIP.intValue();
     }

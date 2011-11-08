@@ -27,7 +27,7 @@ public interface RelationshipLoadingPosition
     
     long nextPosition( long position, RelationshipType... types );
     
-    boolean hasMore();
+    boolean hasMore( RelationshipType... types );
     
     void setNodeManager( NodeManager nodeManager );
 }

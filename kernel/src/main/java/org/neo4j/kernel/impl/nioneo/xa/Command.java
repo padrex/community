@@ -349,7 +349,7 @@ public abstract class Command extends XaCommand
             if ( record.inUse() )
             {
                 buffer.putLong( record.getNextRel() ).putLong(
-                    record.getNextProp() );
+                    record.getNextProp() ).put( record.isSuperNode() ? (byte) 1 : (byte) 0 );
             }
         }
 
@@ -380,7 +380,7 @@ public abstract class Command extends XaCommand
             if ( inUse )
             {
                 buffer.clear();
-                buffer.limit( 16 );
+                buffer.limit( 17 );
                 if ( byteChannel.read( buffer ) != buffer.limit() )
                 {
                     return null;
@@ -388,6 +388,7 @@ public abstract class Command extends XaCommand
                 buffer.flip();
                 record.setNextRel( buffer.getLong() );
                 record.setNextProp( buffer.getLong() );
+                record.setSuperNode( buffer.get() == 1 );
             }
             return new NodeCommand( neoStore == null ? null : neoStore.getNodeStore(), record );
         }

@@ -162,7 +162,6 @@ class ReadTransaction implements NeoStoreTransaction
             position != Record.NO_NEXT_RELATIONSHIP.intValue(); i++ )
         {
             RelationshipRecord relRecord = relStore.getChainRecord( position );
-            System.out.println( "got chain record " + relRecord );
             if ( relRecord == null )
             {
                 // return what we got so far

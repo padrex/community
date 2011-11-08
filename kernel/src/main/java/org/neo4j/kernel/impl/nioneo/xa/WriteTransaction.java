@@ -1401,8 +1401,8 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         RelationshipRecord relRecord = firstRel;
         while ( relId != Record.NO_NEXT_RELATIONSHIP.intValue() )
         {
-            connectRelationshipToSuperNode( node, relRecord, chain );
             relId = node.getId() == relRecord.getFirstNode() ? relRecord.getFirstNextRel() : relRecord.getSecondNextRel();
+            connectRelationshipToSuperNode( node, relRecord, chain );
             if ( relId == Record.NO_NEXT_RELATIONSHIP.intValue() ) break;
             relRecord = getRelationshipRecord( relId, true );
         }
