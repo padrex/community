@@ -212,6 +212,8 @@ public class Config
      */
     @Documented
     public static final String RELATIONSHIP_GRAB_SIZE = "relationship_grab_size";
+    
+    public static final String SUPER_NODE_THRESHOLD = "super_node_threshold";
 
     static final String LOAD_EXTENSIONS = "load_kernel_extensions";
 

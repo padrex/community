@@ -38,6 +38,7 @@ import org.neo4j.graphdb.Traverser;
 import org.neo4j.graphdb.Traverser.Order;
 import org.neo4j.helpers.Pair;
 import org.neo4j.kernel.impl.nioneo.store.PropertyData;
+import org.neo4j.kernel.impl.nioneo.store.Record;
 import org.neo4j.kernel.impl.transaction.LockType;
 import org.neo4j.kernel.impl.traversal.OldTraverserWrapper;
 import org.neo4j.kernel.impl.util.ArrayMap;
@@ -50,6 +51,7 @@ class NodeImpl extends Primitive
 {
     private static final RelIdArray[] NO_RELATIONSHIPS = new RelIdArray[0];
     static final RelationshipType[] NO_RELATIONSHIP_TYPES = new RelationshipType[0];
+    static final RelationshipLoadingPosition EMPTY_LOADING_POSITION = new SingleChainPosition( Record.NO_NEXT_RELATIONSHIP.intValue() );
 
     private volatile RelIdArray[] relationships;
     private RelationshipLoadingPosition relChainPosition;
@@ -68,6 +70,7 @@ class NodeImpl extends Primitive
         if ( newNode )
         {
             relationships = NO_RELATIONSHIPS;
+            relChainPosition = EMPTY_LOADING_POSITION;
         }
     }
 
@@ -397,7 +400,7 @@ class NodeImpl extends Primitive
 
     boolean hasMoreRelationshipsToLoad( RelationshipType[] types )
     {
-        return relChainPosition.hasMore( types );
+        return relChainPosition == null || relChainPosition.hasMore( types );
     }
 
     boolean getMoreRelationships( NodeManager nodeManager, RelationshipType[] types )

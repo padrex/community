@@ -1373,8 +1373,8 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     {
         NodeRecord firstNode = getNodeRecord( firstNodeId, true );
         NodeRecord secondNode = getNodeRecord( secondNodeId, true );
-        convertToSuperNodeIfNecessary( firstNode, RelChain.FIRST );
-        convertToSuperNodeIfNecessary( secondNode, RelChain.SECOND );
+        convertToSuperNodeIfNecessary( firstNode );
+        convertToSuperNodeIfNecessary( secondNode );
         RelationshipRecord record = new RelationshipRecord( id, firstNodeId, secondNodeId, type );
         record.setInUse( true );
         record.setCreated();
@@ -1382,7 +1382,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         connectRelationship( firstNode, secondNode, record );
     }
 
-    private void convertToSuperNodeIfNecessary( NodeRecord node, RelChain chain )
+    private void convertToSuperNodeIfNecessary( NodeRecord node )
     {
         if ( node.isSuperNode() ) return;
         long relId = node.getNextRel();
@@ -1390,11 +1390,11 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         {
             RelationshipRecord rel = getRelationshipRecord( relId, true );
             int count = (int) (node.getId() == rel.getFirstNode() ? rel.getFirstPrevRel() : rel.getSecondPrevRel());
-            if ( count >= neoStore.getSuperNodeThreshold() ) convertToSuperNode( node, rel, chain );
+            if ( count >= neoStore.getSuperNodeThreshold() ) convertToSuperNode( node, rel );
         }
     }
 
-    private void convertToSuperNode( NodeRecord node, RelationshipRecord firstRel, RelChain chain )
+    private void convertToSuperNode( NodeRecord node, RelationshipRecord firstRel )
     {
         node.setNextRel( Record.NO_NEXT_RELATIONSHIP.intValue() );
         long relId = firstRel.getId();
@@ -1402,7 +1402,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         while ( relId != Record.NO_NEXT_RELATIONSHIP.intValue() )
         {
             relId = node.getId() == relRecord.getFirstNode() ? relRecord.getFirstNextRel() : relRecord.getSecondNextRel();
-            connectRelationshipToSuperNode( node, relRecord, chain );
+            connectRelationshipToSuperNode( node, relRecord );
             if ( relId == Record.NO_NEXT_RELATIONSHIP.intValue() ) break;
             relRecord = getRelationshipRecord( relId, true );
         }
@@ -1426,7 +1426,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         }
         else
         {
-            connectRelationshipToSuperNode( firstNode, rel, RelChain.FIRST );
+            connectRelationshipToSuperNode( firstNode, rel );
         }
         
         if ( !secondNode.isSuperNode() )
@@ -1442,13 +1442,13 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             }
             secondNode.setNextRel( rel.getId() );
         }
-        else
+        else if ( firstNode.getId() != secondNode.getId() )
         {
-            connectRelationshipToSuperNode( secondNode, rel, RelChain.SECOND );
+            connectRelationshipToSuperNode( secondNode, rel );
         }
     }
 
-    private void connectRelationshipToSuperNode( NodeRecord node, RelationshipRecord rel, RelChain chain )
+    private void connectRelationshipToSuperNode( NodeRecord node, RelationshipRecord rel )
     {
         RelationshipGroupRecord group = getOrCreateRelationshipGroup( node, rel.getType() );
         boolean isOut = rel.getFirstNode() == node.getId();
@@ -1456,22 +1456,28 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         assert isOut|isIn;
         if ( isOut && isIn )
         {   // Loop
-            chain.setNextRel( rel, group.getNextLoop() );
+            setCorrectNextRel( node, rel, group.getNextLoop() );
             connect( node.getId(), group.getNextLoop(), rel );
             group.setNextLoop( rel.getId() );
         }
         else if ( isOut )
         {   // Outgoing
-            chain.setNextRel( rel, group.getNextOut() );
+            setCorrectNextRel( node, rel, group.getNextOut() );
             connect( node.getId(), group.getNextOut(), rel );
             group.setNextOut( rel.getId() );
         }
         else
         {   // Incoming
-            chain.setNextRel( rel, group.getNextIn() );
+            setCorrectNextRel( node, rel, group.getNextIn() );
             connect( node.getId(), group.getNextIn(), rel );
             group.setNextIn( rel.getId() );
         }
+    }
+    
+    private void setCorrectNextRel( NodeRecord node, RelationshipRecord rel, long nextRel )
+    {
+        if ( node.getId() == rel.getFirstNode() ) rel.setFirstNextRel( nextRel );
+        if ( node.getId() == rel.getSecondNode() ) rel.setSecondNextRel( nextRel );
     }
 
     private RelationshipGroupRecord getOrCreateRelationshipGroup( NodeRecord node, int type )
@@ -2128,40 +2134,4 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
 //        if ( rel == null ) rel = getRelationshipStore().getRecord( nextRel );
 //        return (int) (id == rel.getFirstNode() ? rel.getFirstPrevRel() : rel.getSecondPrevRel());
 //    }
-    
-    public static enum RelChain
-    {
-        FIRST
-        {
-            @Override
-            public void setNextRel( RelationshipRecord rel, long id )
-            {
-                rel.setFirstNextRel( id );
-            }
-
-            @Override
-            public long getNextRel( RelationshipRecord rel )
-            {
-                return rel.getFirstNextRel();
-            }
-        },
-        SECOND
-        {
-            @Override
-            public void setNextRel( RelationshipRecord rel, long id )
-            {
-                rel.setSecondNextRel( id );
-            }
-
-            @Override
-            public long getNextRel( RelationshipRecord rel )
-            {
-                return rel.getSecondNextRel();
-            }
-        };
-        
-        public abstract void setNextRel( RelationshipRecord rel, long id );
-        
-        public abstract long getNextRel( RelationshipRecord rel );
-    }
 }

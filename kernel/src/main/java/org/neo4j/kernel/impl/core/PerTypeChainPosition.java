@@ -62,7 +62,7 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
         for ( RelationshipType type : types )
         {
             TypePosition position = getTypePosition( type );
-            if ( !position.end ) return position.position;
+            if ( !position.end ) return position.position( types );
         }
         return Record.NO_NEXT_RELATIONSHIP.intValue();
     }
@@ -103,7 +103,7 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
         for ( RelationshipType type : types )
         {
             TypePosition position = positions.get( type.name() );
-            return position == null || position.hasMore();
+            if ( position == null || position.hasMore() ) return true;
         }
         return false;
     }
@@ -113,13 +113,12 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
         private final Iterator<Direction> directions = new ArrayIterator<Direction>( Direction.values() );
         private Direction direction = null;
         private RelationshipGroupRecord record;
-        private long position;
+        private long position = Record.NO_NEXT_RELATIONSHIP.intValue();
         private boolean end;
         
         TypePosition( RelationshipGroupRecord record )
         {
             this.record = record;
-            getNextPosition();
         }
         
         @Override
@@ -128,15 +127,15 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
             throw new UnsupportedOperationException();
         }
 
-        private long getNextPosition()
+        private long gotoNextPosition()
         {
             while ( directions.hasNext() )
             {
                 direction = directions.next();
                 this.position = positionForDirection( direction );
-                if ( this.position != Record.NO_NEXT_RELATIONSHIP.intValue() ) break;
+                if ( this.position != Record.NO_NEXT_RELATIONSHIP.intValue() ) return this.position;
             }
-            if ( this.position == Record.NO_NEXT_RELATIONSHIP.intValue() ) end = true;
+            end = true;
             return this.position;
         }
 
@@ -153,6 +152,8 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
         @Override
         public long position( RelationshipType... types )
         {
+            assert !end;
+            if ( position == Record.NO_NEXT_RELATIONSHIP.intValue() ) gotoNextPosition();
             return position;
         }
 
@@ -164,7 +165,7 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
                 this.position = position;
                 return position;
             }
-            return getNextPosition();
+            return gotoNextPosition();
         }
         
         @Override

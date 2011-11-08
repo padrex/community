@@ -308,8 +308,8 @@ public class TestNeoStore extends AbstractNeo4jTestCase
 
         initializeStores();
         startTx();
-        assertEquals( false, xaCon.getWriteTransaction().nodeLoadLight( node1 ) );
-        assertEquals( false, xaCon.getWriteTransaction().nodeLoadLight( node2 ) );
+        assertEquals( false, xaCon.getWriteTransaction().nodeLoadLight( node1 ).exists() );
+        assertEquals( false, xaCon.getWriteTransaction().nodeLoadLight( node2 ).exists() );
         testGetRels( new long[] { rel1, rel2 } );
         // testGetProps( neoStore, new int[] {
         // n1prop1, n1prop2, n1prop3, n2prop1, n2prop2, n2prop3,

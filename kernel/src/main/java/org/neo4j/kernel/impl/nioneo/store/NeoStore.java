@@ -61,6 +61,7 @@ public class NeoStore extends AbstractStore
      */
     private static final int RECORD_SIZE = 9;
     private static final int DEFAULT_REL_GRAB_SIZE = 100;
+    private static final int DEFAULT_SUPER_NODE_THRESHOLD = DEFAULT_REL_GRAB_SIZE;
 
     public static final String DEFAULT_NAME = "neostore";
 
@@ -82,7 +83,7 @@ public class NeoStore extends AbstractStore
     {
         super( (String) config.get( "neo_store" ), config, IdType.NEOSTORE_BLOCK );
         REL_GRAB_SIZE = getIntFromConfig( config, Config.RELATIONSHIP_GRAB_SIZE, DEFAULT_REL_GRAB_SIZE );
-        SUPER_NODE_THRESHOLD = getIntFromConfig( config, "super_node_threshold", REL_GRAB_SIZE/2 );
+        SUPER_NODE_THRESHOLD = getIntFromConfig( config, Config.SUPER_NODE_THRESHOLD, DEFAULT_SUPER_NODE_THRESHOLD );
         lastCommittedTxIdSetter = (LastCommittedTxIdSetter)
                 config.get( LastCommittedTxIdSetter.class );
         idGeneratorFactory = (IdGeneratorFactory) config.get( IdGeneratorFactory.class );
