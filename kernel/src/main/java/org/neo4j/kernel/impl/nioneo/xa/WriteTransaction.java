@@ -718,7 +718,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         long nextProp = record.getNextProp();
         ArrayMap<Integer, PropertyData> propertyMap = getAndDeletePropertyChain( nextProp );
         disconnectRelationship( record );
-        updateNodes( record );
+        updateNodesForDeletedRelationship( record );
         record.setInUse( false );
         return propertyMap;
     }
@@ -898,40 +898,48 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         return ReadTransaction.getMoreRelationships( nodeId, position, getRelGrabSize(), getRelationshipStore(), types );
     }
 
-    private void updateNodes( RelationshipRecord rel )
+    private void updateNodesForDeletedRelationship( RelationshipRecord rel )
     {
-        NodeRecord firstNode = getCachedNodeRecord( rel.getFirstNode() );
-        boolean lookedUpFirstNode = false;
-        if ( firstNode == null )
-        {
-            firstNode = getNodeStore().getRecord( rel.getFirstNode() );
-            lookedUpFirstNode = true;
-        }
-        NodeRecord secondNode = getCachedNodeRecord( rel.getSecondNode() );
-        boolean lookedUpSecondNode = false;
-        if ( secondNode == null )
-        {
-            secondNode = getNodeStore().getRecord( rel.getSecondNode() );
-            lookedUpSecondNode = true;
-        }
+        NodeRecord firstNode = getNodeRecord( rel.getFirstNode(), false );
+        NodeRecord secondNode = getNodeRecord( rel.getSecondNode(), false );
         
-        // Update nodes nextRel
+        // Update nodes nextRel if this relationship is the first in the chain
         if ( rel.isFirstInFirstChain() )
         {
-            if ( lookedUpFirstNode ) cacheNodeRecord( firstNode );
-            firstNode.setNextRel( rel.getFirstNextRel() );
+            if ( !firstNode.isSuperNode() ) firstNode.setNextRel( rel.getFirstNextRel() );
+            else updateRelationshipGroup( rel, firstNode, rel.getFirstNextRel(), firstNode );
         }
         if ( rel.isFirstInSecondChain() )
         {
-            if ( lookedUpSecondNode ) cacheNodeRecord( secondNode );
-            secondNode.setNextRel( rel.getSecondNextRel() );
+            if ( !secondNode.isSuperNode() ) secondNode.setNextRel( rel.getSecondNextRel() );
+            else updateRelationshipGroup( rel, secondNode, rel.getSecondNextRel(), firstNode );
         }
         
-        updateRelCount( firstNode, rel );
-        updateRelCount( secondNode, rel );
+        // Update the relationship count
+        decrementRelationshipCount( firstNode, rel );
+        decrementRelationshipCount( secondNode, rel );
     }
 
-    private void updateRelCount( NodeRecord node, RelationshipRecord rel )
+    private void updateRelationshipGroup( RelationshipRecord rel, NodeRecord node,
+            long nextRel, NodeRecord firstNode )
+    {
+        Map<Integer, RelationshipGroupRecord> groups = getRelationshipGroups( node );
+        RelationshipGroupRecord group = groups.get( rel.getType() );
+        assert group != null;
+        Dir dir = getRelationshipDir( rel, firstNode );
+        dir.setNextGroupRel( group, nextRel );
+    }
+
+    private Dir getRelationshipDir( RelationshipRecord rel, NodeRecord firstNode )
+    {
+        boolean isOut = rel.getFirstNode() == firstNode.getId();
+        boolean isIn = rel.getSecondNode() == firstNode.getId();
+        assert isOut|isIn;
+        if ( isOut&isIn ) return Dir.LOOP;
+        return isOut ? Dir.OUT : Dir.IN;
+    }
+
+    private void decrementRelationshipCount( NodeRecord node, RelationshipRecord rel )
     {
         if ( node.getNextRel() != Record.NO_PREV_RELATIONSHIP.intValue() )
         {
@@ -1401,6 +1409,7 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         RelationshipRecord relRecord = firstRel;
         while ( relId != Record.NO_NEXT_RELATIONSHIP.intValue() )
         {
+            getWriteLock( new LockableRelationship( relId ) );
             relId = node.getId() == relRecord.getFirstNode() ? relRecord.getFirstNextRel() : relRecord.getSecondNextRel();
             connectRelationshipToSuperNode( node, relRecord );
             if ( relId == Record.NO_NEXT_RELATIONSHIP.intValue() ) break;
@@ -1452,27 +1461,25 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
     private void connectRelationshipToSuperNode( NodeRecord node, RelationshipRecord rel )
     {
         RelationshipGroupRecord group = getOrCreateRelationshipGroup( node, rel.getType() );
-        boolean isOut = rel.getFirstNode() == node.getId();
-        boolean isIn = rel.getSecondNode() == node.getId();
-        assert isOut|isIn;
-        if ( isOut && isIn )
-        {   // Loop
+        Dir dir = getRelationshipDir( rel, node );
+        
+        // TODO inverse to enum instead
+        switch ( dir )
+        {
+        case LOOP:
             setCorrectNextRel( node, rel, group.getNextLoop() );
             connect( node.getId(), group.getNextLoop(), rel );
-            group.setNextLoop( rel.getId() );
-        }
-        else if ( isOut )
-        {   // Outgoing
+            break;
+        case OUT:
             setCorrectNextRel( node, rel, group.getNextOut() );
             connect( node.getId(), group.getNextOut(), rel );
-            group.setNextOut( rel.getId() );
-        }
-        else
-        {   // Incoming
+            break;
+        case IN:
             setCorrectNextRel( node, rel, group.getNextIn() );
             connect( node.getId(), group.getNextIn(), rel );
-            group.setNextIn( rel.getId() );
+            break;
         }
+        dir.setNextGroupRel( group, rel.getId() );
     }
     
     private void setCorrectNextRel( NodeRecord node, RelationshipRecord rel, long nextRel )
@@ -2122,6 +2129,36 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         if ( relId == Record.NO_NEXT_RELATIONSHIP.intValue() ) return 0;
         RelationshipRecord rel = getRelationshipRecord( relId, true );
         return (int) (node.getId() == rel.getFirstNode() ? rel.getFirstPrevRel() : rel.getSecondPrevRel());
+    }
+    
+    private static enum Dir
+    {
+        OUT
+        {
+            @Override
+            public void setNextGroupRel( RelationshipGroupRecord group, long relId )
+            {
+                group.setNextOut( relId );
+            }
+        },
+        IN
+        {
+            @Override
+            public void setNextGroupRel( RelationshipGroupRecord group, long relId )
+            {
+                group.setNextIn( relId );
+            }
+        },
+        LOOP
+        {
+            @Override
+            public void setNextGroupRel( RelationshipGroupRecord group, long relId )
+            {
+                group.setNextLoop( relId );
+            }
+        };
+        
+        public abstract void setNextGroupRel( RelationshipGroupRecord group, long relId );
     }
     
 //    @Override

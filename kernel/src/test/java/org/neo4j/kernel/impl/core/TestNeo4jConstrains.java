@@ -129,6 +129,7 @@ public class TestNeo4jConstrains extends AbstractNeo4jTestCase
     public void testDeleteNodeWithRel3()
     {
         // make sure we can delete in wrong order
+        System.out.println( "----" );
         Node node0 = getGraphDb().createNode();
         Node node1 = getGraphDb().createNode();
         Node node2 = getGraphDb().createNode();

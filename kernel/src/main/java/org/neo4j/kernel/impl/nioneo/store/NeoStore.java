@@ -61,7 +61,7 @@ public class NeoStore extends AbstractStore
      */
     private static final int RECORD_SIZE = 9;
     private static final int DEFAULT_REL_GRAB_SIZE = 100;
-    private static final int DEFAULT_SUPER_NODE_THRESHOLD = DEFAULT_REL_GRAB_SIZE;
+    private static final int DEFAULT_SUPER_NODE_THRESHOLD = 0; // DEFAULT_REL_GRAB_SIZE;
 
     public static final String DEFAULT_NAME = "neostore";
 
