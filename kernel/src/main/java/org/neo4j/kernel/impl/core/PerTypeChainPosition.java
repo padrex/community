@@ -31,7 +31,7 @@ import org.neo4j.kernel.impl.nioneo.store.RelationshipGroupRecord;
 
 public class PerTypeChainPosition implements RelationshipLoadingPosition
 {
-    private final Map<String, TypePosition> positions = new HashMap<String, TypePosition>();
+    private final Map<String, RelationshipLoadingPosition> positions = new HashMap<String, RelationshipLoadingPosition>();
     private final Map<Integer, RelationshipGroupRecord> rawGroups;
     private Map<String, RelationshipGroupRecord> groups;
     private RelationshipType[] types;
@@ -61,20 +61,19 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
         if ( types.length == 0 ) types = this.types;
         for ( RelationshipType type : types )
         {
-            TypePosition position = getTypePosition( type );
-            if ( !position.end ) return position.position( types );
+            RelationshipLoadingPosition position = getTypePosition( type );
+            if ( position.hasMore( types ) ) return position.position( types );
         }
         return Record.NO_NEXT_RELATIONSHIP.intValue();
     }
 
-    private TypePosition getTypePosition( RelationshipType type )
+    private RelationshipLoadingPosition getTypePosition( RelationshipType type )
     {
-        TypePosition position = positions.get( type.name() );
+        RelationshipLoadingPosition position = positions.get( type.name() );
         if ( position == null )
         {
             RelationshipGroupRecord record = groups.get( type.name() );
-            assert record != null;
-            position = new TypePosition( record );
+            position = record != null ? new TypePosition( record ) : EMPTY_POSITION;
             positions.put( type.name(), position );
         }
         return position;
@@ -86,11 +85,11 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
         if ( types.length == 0 ) types = this.types;
         for ( RelationshipType type : types )
         {
-            TypePosition position = getTypePosition( type );
-            if ( !position.end )
+            RelationshipLoadingPosition position = getTypePosition( type );
+            if ( position.hasMore( types ) )
             {
                 long result = position.nextPosition( nextPosition );
-                if ( !position.end ) return result;
+                if ( position.hasMore( types ) ) return result;
             }
         }
         return Record.NO_NEXT_RELATIONSHIP.intValue();
@@ -102,11 +101,38 @@ public class PerTypeChainPosition implements RelationshipLoadingPosition
         if ( types.length == 0 ) types = this.types;
         for ( RelationshipType type : types )
         {
-            TypePosition position = positions.get( type.name() );
+            RelationshipLoadingPosition position = positions.get( type.name() );
             if ( position == null || position.hasMore() ) return true;
         }
         return false;
     }
+    
+    private static final RelationshipLoadingPosition EMPTY_POSITION = new RelationshipLoadingPosition()
+    {
+        @Override
+        public void setNodeManager( NodeManager nodeManager )
+        {
+            throw new UnsupportedOperationException();
+        }
+        
+        @Override
+        public long position( RelationshipType... types )
+        {
+            return Record.NO_NEXT_RELATIONSHIP.intValue();
+        }
+        
+        @Override
+        public long nextPosition( long position, RelationshipType... types )
+        {
+            return Record.NO_NEXT_RELATIONSHIP.intValue();
+        }
+        
+        @Override
+        public boolean hasMore( RelationshipType... types )
+        {
+            return false;
+        }
+    };
     
     private static class TypePosition implements RelationshipLoadingPosition
     {

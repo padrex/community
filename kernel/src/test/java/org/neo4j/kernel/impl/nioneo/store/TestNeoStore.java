@@ -344,7 +344,9 @@ public class TestNeoStore extends AbstractNeo4jTestCase
 
     private RelationshipLoadingPosition getPosition( NeoStoreXaConnection xaCon, long node )
     {
-        return xaCon.getWriteTransaction().getRelationshipChainPosition( node );
+        RelationshipLoadingPosition pos = xaCon.getWriteTransaction().getRelationshipChainPosition( node );
+        
+        return pos;
     }
 
     @SuppressWarnings( "unchecked" )

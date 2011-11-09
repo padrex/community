@@ -903,31 +903,35 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         NodeRecord firstNode = getNodeRecord( rel.getFirstNode(), false );
         NodeRecord secondNode = getNodeRecord( rel.getSecondNode(), false );
         
-        // Update nodes nextRel if this relationship is the first in the chain
-        if ( rel.isFirstInFirstChain() )
+        if ( !firstNode.isSuperNode() )
         {
-            if ( !firstNode.isSuperNode() ) firstNode.setNextRel( rel.getFirstNextRel() );
-            else updateRelationshipGroup( rel, firstNode, rel.getFirstNextRel(), firstNode );
+            if ( rel.isFirstInFirstChain() ) firstNode.setNextRel( rel.getFirstNextRel() );
+            decrementRelationshipCount( firstNode.getId(), rel, firstNode.getNextRel() );
         }
-        if ( rel.isFirstInSecondChain() )
+        else
         {
-            if ( !secondNode.isSuperNode() ) secondNode.setNextRel( rel.getSecondNextRel() );
-            else updateRelationshipGroup( rel, secondNode, rel.getSecondNextRel(), firstNode );
+            Map<Integer, RelationshipGroupRecord> groups = getRelationshipGroups( firstNode );
+            RelationshipGroupRecord group = groups.get( rel.getType() );
+            assert group != null;
+            Dir dir = getRelationshipDir( rel, firstNode );
+            if ( rel.isFirstInFirstChain() ) dir.setNextGroupRel( group, rel.getFirstNextRel() );
+            decrementRelationshipCount( firstNode.getId(), rel, dir.getNextGroupRel( group ) );
         }
         
-        // Update the relationship count
-        decrementRelationshipCount( firstNode, rel );
-        decrementRelationshipCount( secondNode, rel );
-    }
-
-    private void updateRelationshipGroup( RelationshipRecord rel, NodeRecord node,
-            long nextRel, NodeRecord firstNode )
-    {
-        Map<Integer, RelationshipGroupRecord> groups = getRelationshipGroups( node );
-        RelationshipGroupRecord group = groups.get( rel.getType() );
-        assert group != null;
-        Dir dir = getRelationshipDir( rel, firstNode );
-        dir.setNextGroupRel( group, nextRel );
+        if ( !secondNode.isSuperNode() )
+        {
+            if ( rel.isFirstInSecondChain() ) secondNode.setNextRel( rel.getSecondNextRel() );
+            decrementRelationshipCount( secondNode.getId(), rel, secondNode.getNextRel() );
+        }
+        else
+        {
+            Map<Integer, RelationshipGroupRecord> groups = getRelationshipGroups( secondNode );
+            RelationshipGroupRecord group = groups.get( rel.getType() );
+            assert group != null;
+            Dir dir = getRelationshipDir( rel, secondNode );
+            if ( rel.isFirstInSecondChain() ) dir.setNextGroupRel( group, rel.getSecondNextRel() );
+            decrementRelationshipCount( secondNode.getId(), rel, dir.getNextGroupRel( group ) );
+        }
     }
 
     private Dir getRelationshipDir( RelationshipRecord rel, NodeRecord firstNode )
@@ -939,27 +943,27 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
         return isOut ? Dir.OUT : Dir.IN;
     }
 
-    private void decrementRelationshipCount( NodeRecord node, RelationshipRecord rel )
+    /**
+     * @return true if last relationship
+     */
+    private boolean decrementRelationshipCount( long nodeId, RelationshipRecord rel, long firstRelId )
     {
-        if ( node.getNextRel() != Record.NO_PREV_RELATIONSHIP.intValue() )
+        if ( firstRelId != Record.NO_PREV_RELATIONSHIP.intValue() )
         {
-            RelationshipRecord firstRel = getCachedRelationshipRecord( node.getNextRel() );
-            if ( firstRel == null )
-            {
-                firstRel = getRelationshipStore().getRecord( node.getNextRel() );
-                cacheRelationshipRecord( firstRel );
-            }
-            if ( node.getId() == firstRel.getFirstNode() )
+            RelationshipRecord firstRel = getRelationshipRecord( firstRelId, false );
+            if ( nodeId == firstRel.getFirstNode() )
             {
                 firstRel.setFirstPrevRel( rel.isFirstInFirstChain() ? rel.getFirstPrevRel()-1 : firstRel.getFirstPrevRel()-1 );
                 firstRel.setFirstInFirstChain( true );
             }
-            if ( node.getId() == firstRel.getSecondNode() )
+            if ( nodeId == firstRel.getSecondNode() )
             {
                 firstRel.setSecondPrevRel( rel.isFirstInSecondChain() ? rel.getSecondPrevRel()-1 : firstRel.getSecondPrevRel()-1 );
                 firstRel.setFirstInSecondChain( true );
             }
+            return false;
         }
+        return true;
     }
 
     @Override
@@ -2140,6 +2144,12 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             {
                 group.setNextOut( relId );
             }
+            
+            @Override
+            public long getNextGroupRel( RelationshipGroupRecord group )
+            {
+                return group.getNextOut();
+            }
         },
         IN
         {
@@ -2147,6 +2157,12 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             public void setNextGroupRel( RelationshipGroupRecord group, long relId )
             {
                 group.setNextIn( relId );
+            }
+            
+            @Override
+            public long getNextGroupRel( RelationshipGroupRecord group )
+            {
+                return group.getNextIn();
             }
         },
         LOOP
@@ -2156,9 +2172,17 @@ public class WriteTransaction extends XaTransaction implements NeoStoreTransacti
             {
                 group.setNextLoop( relId );
             }
+            
+            @Override
+            public long getNextGroupRel( RelationshipGroupRecord group )
+            {
+                return group.getNextLoop();
+            }
         };
         
         public abstract void setNextGroupRel( RelationshipGroupRecord group, long relId );
+        
+        public abstract long getNextGroupRel( RelationshipGroupRecord group );
     }
     
 //    @Override
