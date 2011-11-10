@@ -58,6 +58,8 @@ public abstract class Command extends XaCommand
     {
         this.key = key;
     }
+    
+    public abstract void accept( CommandRecordVisitor visitor );
 
     @Override
     protected void setRecovered()
@@ -296,6 +298,12 @@ public abstract class Command extends XaCommand
             this.record = record;
             this.store = store;
         }
+        
+        @Override
+        public void accept( CommandRecordVisitor visitor )
+        {
+            visitor.visitNode( record );
+        }
 
         @Override
         boolean isCreated()
@@ -326,7 +334,7 @@ public abstract class Command extends XaCommand
         @Override
         public String toString()
         {
-            return "NodeCommand[" + record + "]";
+            return record.toString();
         }
 
         @Override
@@ -405,6 +413,12 @@ public abstract class Command extends XaCommand
             this.record = record;
             this.store = store;
         }
+        
+        @Override
+        public void accept( CommandRecordVisitor visitor )
+        {
+            visitor.visitRelationship( record );
+        }
 
         @Override
         boolean isCreated()
@@ -450,7 +464,7 @@ public abstract class Command extends XaCommand
         @Override
         public String toString()
         {
-            return "RelationshipCommand[" + record + "]";
+            return record.toString();
         }
 
         @Override
@@ -599,6 +613,12 @@ public abstract class Command extends XaCommand
             this.record = record;
             this.store = store;
         }
+        
+        @Override
+        public void accept( CommandRecordVisitor visitor )
+        {
+            visitor.visitPropertyIndex( record );
+        }
 
         @Override
         boolean isCreated()
@@ -629,7 +649,7 @@ public abstract class Command extends XaCommand
         @Override
         public String toString()
         {
-            return "PropertyIndexCommand[" + record + "]";
+            return record.toString();
         }
 
         @Override
@@ -721,6 +741,12 @@ public abstract class Command extends XaCommand
             this.record = record;
             this.store = store;
         }
+        
+        @Override
+        public void accept( CommandRecordVisitor visitor )
+        {
+            visitor.visitProperty( record );
+        }
 
         @Override
         boolean isCreated()
@@ -761,7 +787,7 @@ public abstract class Command extends XaCommand
         @Override
         public String toString()
         {
-            return "PropertyCommand[" + record + "]";
+            return record.toString();
         }
 
         @Override
@@ -926,6 +952,12 @@ public abstract class Command extends XaCommand
             this.record = record;
             this.store = store;
         }
+        
+        @Override
+        public void accept( CommandRecordVisitor visitor )
+        {
+            visitor.visitRelationshipType( record );
+        }
 
         @Override
         boolean isCreated()
@@ -956,7 +988,7 @@ public abstract class Command extends XaCommand
         @Override
         public String toString()
         {
-            return "RelationshipTypeCommand[" + record + "]";
+            return record.toString();
         }
 
         @Override

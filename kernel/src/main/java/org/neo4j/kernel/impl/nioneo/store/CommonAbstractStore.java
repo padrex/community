@@ -239,7 +239,7 @@ public abstract class CommonAbstractStore
         {
             if ( !isReadOnly() || isBackupSlave() )
             {
-                openIdGenerator();
+                openIdGenerator( true );
             }
             else
             {
@@ -506,6 +506,7 @@ public abstract class CommonAbstractStore
             }
             rebuildIdGenerator();
             storeOk = true;
+            causeOfStoreNotOk = null;
         }
     }
 
@@ -606,16 +607,15 @@ public abstract class CommonAbstractStore
     /**
      * Opens the {@link IdGenerator} used by this store.
      */
-    protected void openIdGenerator()
+    protected void openIdGenerator( boolean firstTime )
     {
-        idGenerator = openIdGenerator( storageFileName + ".id",
-            idType.getGrabSize() );
+        idGenerator = openIdGenerator( storageFileName + ".id", idType.getGrabSize(), firstTime );
     }
 
-    protected IdGenerator openIdGenerator( String fileName, int grabSize )
+    protected IdGenerator openIdGenerator( String fileName, int grabSize, boolean firstTime )
     {
         return idGeneratorFactory.open( fileName, grabSize, getIdType(),
-                figureOutHighestIdInUse() );
+                figureOutHighestIdInUse(), firstTime );
     }
 
     protected abstract long figureOutHighestIdInUse();
@@ -645,7 +645,7 @@ public abstract class CommonAbstractStore
     {
         if ( idGenerator != null )
         {
-            idGenerator.close();
+            idGenerator.close( false );
         }
     }
 
@@ -692,7 +692,7 @@ public abstract class CommonAbstractStore
         {
             recordSize = ((AbstractStore) this).getRecordSize();
         }
-        closeIdGenerator();
+        idGenerator.close( true );
         boolean success = false;
         IOException storedIoe = null;
         // hack for WINBLOWS
@@ -813,5 +813,9 @@ public abstract class CommonAbstractStore
         }
     }
 
-
+    @Override
+    public String toString()
+    {
+        return getClass().getSimpleName();
+    }
 }

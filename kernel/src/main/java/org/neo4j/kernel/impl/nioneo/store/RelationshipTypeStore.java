@@ -38,7 +38,7 @@ import org.neo4j.kernel.impl.util.StringLogger;
  * Implementation of the relationship type store. Uses a dynamic store to store
  * relationship type names.
  */
-public class RelationshipTypeStore extends AbstractStore implements Store
+public class RelationshipTypeStore extends AbstractStore implements Store, RecordStore<RelationshipTypeRecord>
 {
     public static final String TYPE_DESCRIPTOR = "RelationshipTypeStore";
 
@@ -53,6 +53,17 @@ public class RelationshipTypeStore extends AbstractStore implements Store
     public RelationshipTypeStore( String fileName, Map<?,?> config, IdType idType )
     {
         super( fileName, config, idType );
+    }
+
+    @Override
+    public void accept( RecordStore.Processor processor, RelationshipTypeRecord record )
+    {
+        processor.processRelationshipType( this, record );
+    }
+
+    DynamicStringStore getNameStore()
+    {
+        return typeNameStore;
     }
 
     @Override
@@ -103,6 +114,12 @@ public class RelationshipTypeStore extends AbstractStore implements Store
     public int getRecordSize()
     {
         return RECORD_SIZE;
+    }
+
+    @Override
+    public int getRecordHeaderSize()
+    {
+        return getRecordSize();
     }
 
     /**
@@ -179,13 +196,28 @@ public class RelationshipTypeStore extends AbstractStore implements Store
         }
     }
 
+    @Override
+    public void forceUpdateRecord( RelationshipTypeRecord record )
+    {
+        PersistenceWindow window = acquireWindow( record.getId(),
+                OperationType.WRITE );
+        try
+        {
+            updateRecord( record, window );
+        }
+        finally
+        {
+            releaseWindow( window );
+        }
+    }
+
     public RelationshipTypeRecord getRecord( int id )
     {
         RelationshipTypeRecord record;
         PersistenceWindow window = acquireWindow( id, OperationType.READ );
         try
         {
-            record = getRecord( id, window );
+            record = getRecord( id, window, false );
         }
         finally
         {
@@ -201,6 +233,35 @@ public class RelationshipTypeStore extends AbstractStore implements Store
             }
         }
         return record;
+    }
+
+    @Override
+    public RelationshipTypeRecord getRecord( long id )
+    {
+        return getRecord( (int) id );
+    }
+
+    @Override
+    public RelationshipTypeRecord forceGetRecord( long id )
+    {
+        PersistenceWindow window = null;
+        try
+        {
+            window = acquireWindow( id, OperationType.READ );
+        }
+        catch ( InvalidRecordException e )
+        {
+            return new RelationshipTypeRecord( (int)id );
+        }
+        
+        try
+        {
+            return getRecord( (int) id, window, true );
+        }
+        finally
+        {
+            releaseWindow( window );
+        }
     }
 
     public RelationshipTypeData getRelationshipType( int id, boolean recovered )
@@ -269,21 +330,23 @@ public class RelationshipTypeStore extends AbstractStore implements Store
             Record.RESERVED.intValue() );
     }
 
-    private RelationshipTypeRecord getRecord( int id, PersistenceWindow window )
+    private RelationshipTypeRecord getRecord( int id, PersistenceWindow window, boolean force )
     {
         Buffer buffer = window.getOffsettedBuffer( id );
         byte inUse = buffer.get();
-        if ( inUse == Record.NOT_IN_USE.byteValue() )
+        if ( !force )
         {
-            return null;
-        }
-        if ( inUse != Record.IN_USE.byteValue() )
-        {
-            throw new InvalidRecordException( "Record[" + id +
-                "] unknown in use flag[" + inUse + "]" );
+            if ( inUse == Record.NOT_IN_USE.byteValue() )
+            {
+                return null;
+            }
+            if ( inUse != Record.IN_USE.byteValue() )
+            {
+                throw new InvalidRecordException( "Record[" + id + "] unknown in use flag[" + inUse + "]" );
+            }
         }
         RelationshipTypeRecord record = new RelationshipTypeRecord( id );
-        record.setInUse( true );
+        record.setInUse( inUse == Record.IN_USE.byteValue() );
         record.setTypeBlock( buffer.getInt() );
         return record;
     }
@@ -317,7 +380,7 @@ public class RelationshipTypeStore extends AbstractStore implements Store
             assert success;
         }
         createIdGenerator( getStorageFileName() + ".id" );
-        openIdGenerator();
+        openIdGenerator( false );
         FileChannel fileChannel = getFileChannel();
         long highId = -1;
         int recordSize = getRecordSize();
@@ -358,7 +421,7 @@ public class RelationshipTypeStore extends AbstractStore implements Store
         setHighId( highId );
         logger.fine( "[" + getStorageFileName() + "] high id=" + getHighId() );
         closeIdGenerator();
-        openIdGenerator();
+        openIdGenerator( false );
     }
 
     public String getStringFor( RelationshipTypeRecord relTypeRecord )

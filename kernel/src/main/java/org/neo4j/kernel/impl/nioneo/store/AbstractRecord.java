@@ -19,45 +19,30 @@
  */
 package org.neo4j.kernel.impl.nioneo.store;
 
-public abstract class AbstractRecord
+public abstract class AbstractRecord extends AbstractBaseRecord
 {
-    private boolean inUse = false;
     private final int id;
-    private boolean created = false;
 
     AbstractRecord( int id )
     {
+        super( false );
         this.id = id;
     }
 
     AbstractRecord( int id, boolean inUse )
     {
+        super( inUse );
         this.id = id;
-        this.inUse = inUse;
     }
 
     public int getId()
     {
         return id;
     }
-
-    public boolean inUse()
+    
+    @Override
+    public long getLongId()
     {
-        return inUse;
-    }
-
-    public void setInUse( boolean inUse )
-    {
-        this.inUse = inUse;
-    }
-
-    public void setCreated()
-    {
-        this.created = true;
-    }
-
-    public boolean isCreated()
-    {
-        return created;
+        return id;
     }
 }

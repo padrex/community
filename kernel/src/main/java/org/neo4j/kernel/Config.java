@@ -44,6 +44,7 @@ import org.neo4j.kernel.impl.persistence.IdGenerator;
 import org.neo4j.kernel.impl.persistence.IdGeneratorModule;
 import org.neo4j.kernel.impl.persistence.PersistenceModule;
 import org.neo4j.kernel.impl.transaction.LockManager;
+import org.neo4j.kernel.impl.transaction.TxHook;
 import org.neo4j.kernel.impl.transaction.TxModule;
 import org.neo4j.kernel.impl.transaction.xaframework.TxIdGenerator;
 
@@ -129,18 +130,37 @@ public class Config
     /** Relative path for where the Neo4j storage information file is located */
     @Documented
     public static final String NEO_STORE = "neo_store";
+
     /**
      * The type of cache to use for nodes and relationships, one of [weak, soft,
      * none]
      */
     @Documented
     public static final String CACHE_TYPE = "cache_type";
+
     /**
      * The name of the Transaction Manager service to use as defined in the TM
      * service provider constructor, defaults to native.
      */
     @Documented
     public static final String TXMANAGER_IMPLEMENTATION = "tx_manager_impl";
+
+    /**
+     * Determines whether any TransactionInterceptors loaded will intercept
+     * prepared transactions before they reach the logical log. Defaults to
+     * false.
+     */
+    @Documented
+    public static final String INTERCEPT_COMMITTING_TRANSACTIONS = "intercept_committing_transactions";
+
+    /**
+     * Determines whether any TransactionInterceptors loaded will intercept
+     * externally received transactions (e.g. in HA) before they reach the
+     * logical log and are applied to the store. Defaults to false.
+     */
+    @Documented
+    public static final String INTERCEPT_DESERIALIZED_TRANSACTIONS = "intercept_deserialized_transactions";
+
     /**
      * Boolean (one of true,false) defining whether to allow a store upgrade
      * in case the current version of the database starts against an older store
@@ -249,6 +269,7 @@ public class Config
         params.put( TransactionManager.class, txModule.getTxManager() );
         params.put( LastCommittedTxIdSetter.class, lastCommittedTxIdSetter );
         params.put( GraphDbModule.class, graphDbModule );
+        params.put( TxHook.class, txModule.getTxHook() );
     }
 
     public static Map<Object, Object> getDefaultParams()
@@ -298,7 +319,7 @@ public class Config
     {
         return persistenceSourceName;
     }
-    
+
     boolean getCreatePersistenceSource()
     {
         return create;

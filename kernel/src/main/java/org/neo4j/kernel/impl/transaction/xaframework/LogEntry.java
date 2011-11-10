@@ -54,14 +54,16 @@ public abstract class LogEntry
     {
         private final Xid xid;
         private final int masterId;
+        private final int myId;
         private final long timeWritten;
         private long startPosition;
 
-        Start( Xid xid, int identifier, int masterId, long startPosition, long timeWritten )
+        Start( Xid xid, int identifier, int masterId, int myId, long startPosition, long timeWritten )
         {
             super( identifier );
             this.xid = xid;
             this.masterId = masterId;
+            this.myId = myId;
             this.startPosition = startPosition;
             this.timeWritten = timeWritten;
         }
@@ -74,6 +76,11 @@ public abstract class LogEntry
         public int getMasterId()
         {
             return masterId;
+        }
+
+        public int getLocalId()
+        {
+            return myId;
         }
 
         public long getStartPosition()
@@ -94,7 +101,7 @@ public abstract class LogEntry
         @Override
         public String toString()
         {
-            return "Start[" + getIdentifier() + ", " + xid + ", " + timestamp( timeWritten ) + "]";
+            return "Start[" + getIdentifier() + ",xid=" + xid + ",master=" + masterId + ",me=" + myId + ",time=" + timestamp( timeWritten ) + "]";
         }
     }
 
@@ -123,25 +130,18 @@ public abstract class LogEntry
     public static abstract class Commit extends LogEntry
     {
         private final long txId;
-        private final int masterId;
         private final long timeWritten;
 
-        Commit( int identifier, long txId, int masterId, long timeWritten )
+        Commit( int identifier, long txId, long timeWritten )
         {
             super( identifier );
             this.txId = txId;
-            this.masterId = masterId;
             this.timeWritten = timeWritten;
         }
 
         public long getTxId()
         {
             return txId;
-        }
-
-        public int getMasterId()
-        {
-            return masterId;
         }
         
         public long getTimeWritten()
@@ -152,15 +152,15 @@ public abstract class LogEntry
 
     public static class OnePhaseCommit extends Commit
     {
-        OnePhaseCommit( int identifier, long txId, int masterId, long timeWritten )
+        OnePhaseCommit( int identifier, long txId, long timeWritten )
         {
-            super( identifier, txId, masterId, timeWritten );
+            super( identifier, txId, timeWritten );
         }
 
         @Override
         public String toString()
         {
-            return "1PC[" + getIdentifier() + ", txId=" + getTxId() + ", masterId=" + getMasterId() + ", " + timestamp( getTimeWritten() ) + "]";
+            return "1PC[" + getIdentifier() + ", txId=" + getTxId() + ", " + timestamp( getTimeWritten() ) + "]";
         }
     }
 
@@ -180,15 +180,15 @@ public abstract class LogEntry
 
     public static class TwoPhaseCommit extends Commit
     {
-        TwoPhaseCommit( int identifier, long txId, int masterId, long timeWritten )
+        TwoPhaseCommit( int identifier, long txId, long timeWritten )
         {
-            super( identifier, txId, masterId, timeWritten );
+            super( identifier, txId, timeWritten );
         }
 
         @Override
         public String toString()
         {
-            return "2PC[" + getIdentifier() + ", txId=" + getTxId() + ", masterId=" + getMasterId() + ", " + timestamp( getTimeWritten() ) + "]";
+            return "2PC[" + getIdentifier() + ", txId=" + getTxId() + ", " + timestamp( getTimeWritten() ) + "]";
         }
     }
 

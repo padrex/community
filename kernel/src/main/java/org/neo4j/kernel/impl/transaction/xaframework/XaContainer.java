@@ -20,7 +20,11 @@
 package org.neo4j.kernel.impl.transaction.xaframework;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+
+import org.neo4j.helpers.Pair;
+import org.neo4j.kernel.Config;
 
 /**
  * This is a wrapper class containing the logical log, command factory,
@@ -44,7 +48,7 @@ public class XaContainer
 
     /**
      * Creates a XaContainer.
-     * 
+     *
      * @param logicalLog
      *            The logical log file name
      * @param cf
@@ -53,8 +57,10 @@ public class XaContainer
      *            The transaction factory implementation
      * @param config Configuration map or null if no config needed
      */
-    public static XaContainer create( XaDataSource dataSource, String logicalLog,
-            XaCommandFactory cf, XaTransactionFactory tf, Map<Object,Object> config )
+    public static XaContainer create( XaDataSource dataSource,
+            String logicalLog, XaCommandFactory cf, XaTransactionFactory tf,
+            List<Pair<TransactionInterceptorProvider, Object>> providers,
+            Map<Object, Object> config )
     {
         if ( logicalLog == null || cf == null || tf == null )
         {
@@ -62,23 +68,36 @@ public class XaContainer
                 + "LogicalLog[" + logicalLog + "] CommandFactory[" + cf
                 + "TransactionFactory[" + tf + "]" );
         }
-        return new XaContainer( dataSource, logicalLog, cf, tf, config );
+        return new XaContainer( dataSource, logicalLog, cf, tf, providers,
+                config );
     }
 
     private XaContainer( XaDataSource dataSource, String logicalLog,
-            XaCommandFactory cf, XaTransactionFactory tf, Map<Object,Object> config )
+            XaCommandFactory cf, XaTransactionFactory tf,
+            List<Pair<TransactionInterceptorProvider, Object>> providers,
+            Map<Object, Object> config )
     {
         this.cf = cf;
         this.tf = tf;
-        
+
         // OK, this is ugly (although it only happens in test cases... config is never
         // null diring normal circumstances.
         TxIdGenerator txIdFactory = config != null ?
                 (TxIdGenerator) config.get( TxIdGenerator.class ) : TxIdGenerator.DEFAULT;
         txIdFactory = txIdFactory != null ? txIdFactory : TxIdGenerator.DEFAULT;
-        
+
         rm = new XaResourceManager( dataSource, tf, txIdFactory, logicalLog );
-        log = new XaLogicalLog( logicalLog, rm, cf, tf, config );
+
+        if ( "true".equalsIgnoreCase( (String) config.get( Config.INTERCEPT_DESERIALIZED_TRANSACTIONS ) )
+             && providers != null )
+        {
+            log = new InterceptingXaLogicalLog( logicalLog, rm, cf, tf, config,
+                    providers );
+        }
+        else
+        {
+            log = new XaLogicalLog( logicalLog, rm, cf, tf, config );
+        }
         rm.setLogicalLog( log );
         tf.setLogicalLog( log );
     }

@@ -36,6 +36,8 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.helpers.Exceptions;
+import org.neo4j.helpers.Pair;
+import org.neo4j.helpers.Service;
 import org.neo4j.helpers.UTF8;
 import org.neo4j.helpers.collection.ClosableIterable;
 import org.neo4j.kernel.Config;
@@ -50,6 +52,8 @@ import org.neo4j.kernel.impl.nioneo.store.WindowPoolStats;
 import org.neo4j.kernel.impl.persistence.IdGenerationFailedException;
 import org.neo4j.kernel.impl.transaction.LockManager;
 import org.neo4j.kernel.impl.transaction.xaframework.LogBackedXaDataSource;
+import org.neo4j.kernel.impl.transaction.xaframework.TransactionInterceptor;
+import org.neo4j.kernel.impl.transaction.xaframework.TransactionInterceptorProvider;
 import org.neo4j.kernel.impl.transaction.xaframework.XaCommand;
 import org.neo4j.kernel.impl.transaction.xaframework.XaCommandFactory;
 import org.neo4j.kernel.impl.transaction.xaframework.XaConnection;
@@ -86,6 +90,8 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
     private final LockReleaser lockReleaser;
     private final String storeDir;
     private final boolean readOnly;
+
+    private final List<Pair<TransactionInterceptorProvider, Object>> providers;
 
     private boolean logApplied = false;
 
@@ -134,9 +140,34 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
             NeoStore.createStore( store, config );
         }
 
+        providers = new ArrayList<Pair<TransactionInterceptorProvider, Object>>(
+                2 );
+        for ( TransactionInterceptorProvider provider : Service.load( TransactionInterceptorProvider.class ) )
+        {
+            Object conf = config.get( provider.getClass().getSimpleName()
+                                      + "." + provider.name() );
+            if ( conf != null )
+            {
+                providers.add( Pair.of( provider, conf ) );
+            }
+        }
+
+        TransactionFactory tf = null;
+        if ( "true".equalsIgnoreCase( (String) config.get( Config.INTERCEPT_COMMITTING_TRANSACTIONS ) )
+             && !providers.isEmpty() )
+        {
+            tf = new InterceptingTransactionFactory();
+        }
+        else
+        {
+            tf = new TransactionFactory();
+        }
         neoStore = new NeoStore( config );
-        xaContainer = XaContainer.create( this, (String) config.get( "logical_log" ),
-                new CommandFactory( neoStore ), new TransactionFactory(), config );
+        config.put( NeoStore.class, neoStore );
+        xaContainer = XaContainer.create( this,
+                (String) config.get( "logical_log" ), new CommandFactory(
+                        neoStore ), tf, providers.isEmpty() ? null : providers,
+                config );
         try
         {
             if ( !readOnly )
@@ -251,7 +282,7 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
 //            neoStore.getPropertyStore().getIndexStore() );
 //    }
 
-    NeoStore getNeoStore()
+    public NeoStore getNeoStore()
     {
         return neoStore;
     }
@@ -306,6 +337,19 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
                 command.setRecovered();
             }
             return command;
+        }
+    }
+
+    private class InterceptingTransactionFactory extends TransactionFactory
+    {
+        @Override
+        public XaTransaction create( int identifier )
+        {
+
+            TransactionInterceptor first = TransactionInterceptorProvider.resolveChain(
+                    providers, NeoStoreXaDataSource.this );
+            return new InterceptingWriteTransaction( identifier,
+                    getLogicalLog(), neoStore, lockReleaser, lockManager, first );
         }
     }
 
@@ -531,6 +575,11 @@ public class NeoStoreXaDataSource extends LogBackedXaDataSource
             {
             }
         };
+    }
+
+    public StringLogger getMsgLog()
+    {
+        return msgLog;
     }
 
     public void logStoreVersions()

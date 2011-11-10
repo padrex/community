@@ -120,16 +120,19 @@ public abstract class AbstractStore extends CommonAbstractStore
         super( fileName, config, idType );
     }
 
+    @Override
     protected int getEffectiveRecordSize()
     {
         return getRecordSize();
     }
 
+    @Override
     protected void readAndVerifyBlockSize() throws IOException
     {
         // record size is fixed for non-dynamic stores, so nothing to do here
     }
 
+    @Override
     protected void verifyFileSizeAndTruncate() throws IOException
     {
         int expectedVersionLength = UTF8.encode( buildTypeDescriptorAndVersion( getTypeDescriptor() ) ).length;
@@ -212,7 +215,7 @@ public abstract class AbstractStore extends CommonAbstractStore
             assert success;
         }
         createIdGenerator( getStorageFileName() + ".id" );
-        openIdGenerator();
+        openIdGenerator( false );
         FileChannel fileChannel = getFileChannel();
         long highId = 1;
         long defraggedCount = 0;
@@ -277,7 +280,7 @@ public abstract class AbstractStore extends CommonAbstractStore
         logger.fine( "[" + getStorageFileName() + "] high id=" + getHighId()
             + " (defragged=" + defraggedCount + ")" );
         closeIdGenerator();
-        openIdGenerator();
+        openIdGenerator( false );
     }
 
     public abstract List<WindowPoolStats> getAllWindowPoolStats();
