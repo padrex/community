@@ -579,6 +579,12 @@ public abstract class Command extends XaCommand
         {
             neoStore.setGraphNextProp( record.getNextProp() );
         }
+        
+        @Override
+        public void accept( CommandRecordVisitor visitor )
+        {
+            visitor.visitNeoStore( record );
+        }
 
         @Override
         public void writeToFile( LogBuffer buffer ) throws IOException

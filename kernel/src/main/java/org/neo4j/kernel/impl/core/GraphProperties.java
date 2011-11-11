@@ -31,19 +31,12 @@ public class GraphProperties extends Primitive implements PropertyContainer
     private final NodeManager nodeManager;
     
     // TODO Primitive have a PropertyData[], make this use a Map instead
-//    private final ArrayMap<Integer, PropertyData> properties;
     
     GraphProperties( NodeManager nodeManager, long startRecord )
     {
         super( false );
         this.nodeManager = nodeManager;
-//        this.properties = cacheProperties( startRecord );
     }
-    
-//    private ArrayMap<Integer, PropertyData> cacheProperties( long startRecord )
-//    {
-//        return nodeManager.getPersistenceManager().loadProperties( startRecord, false );
-//    }
 
     @Override
     public GraphDatabaseService getGraphDatabase()
